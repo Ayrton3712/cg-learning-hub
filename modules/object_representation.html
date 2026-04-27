@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Object Representation — CG Learning Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0a0a0f;
+      --panel:   #0f0f1a;
+      --border:  #1e1e3a;
+      --accent:  #00e5ff;
+      --accent2: #ff3d6b;
+      --accent3: #aaff00;
+      --text:    #c8d0e8;
+      --muted:   #4a5068;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Viewport ── */
+    #viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewport canvas {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+    }
+
+    /* ── Right Panel ── */
+    #panel {
+      width: 260px;
+      min-width: 260px;
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #panel::-webkit-scrollbar { width: 4px; }
+    #panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .panel-header {
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .panel-header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .panel-header p {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .sel-indicator {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid var(--border);
+      transition: color 0.15s;
+    }
+
+    .sel-indicator.active { color: var(--accent); }
+
+    .section {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      margin-bottom: 10px;
+    }
+
+    /* ── Rep Buttons ── */
+    .rep-btn {
+      display: block;
+      width: 100%;
+      padding: 8px 12px;
+      margin-bottom: 6px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .rep-btn:last-child { margin-bottom: 0; }
+
+    .rep-btn:hover {
+      border-color: var(--muted);
+      color: var(--text);
+    }
+
+    .rep-btn.active {
+      border-color: var(--accent);
+      background: rgba(0, 229, 255, 0.07);
+      color: var(--accent);
+    }
+
+    /* ── Sliders ── */
+    .param-row { margin-bottom: 14px; }
+    .param-row:last-child { margin-bottom: 0; }
+
+    .param-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .param-label span { color: var(--accent); }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      border-radius: 1px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+    /* ── Toggles ── */
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .toggle-row:last-child { margin-bottom: 0; }
+
+    .toggle-label { font-size: 10px; color: var(--muted); }
+
+    .toggle {
+      width: 34px;
+      height: 18px;
+      background: var(--border);
+      border-radius: 9px;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+
+    .toggle.on { background: var(--accent); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      top: 2px;
+      left: 2px;
+      transition: left 0.2s;
+    }
+
+    .toggle.on::after { left: 18px; }
+
+    /* ── Select ── */
+    .select-row { margin-bottom: 12px; }
+    .select-row:last-child { margin-bottom: 0; }
+
+    .select-row select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 11px;
+      padding: 7px 8px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .select-row select:focus { border-color: var(--accent); }
+
+    /* ── Info Box ── */
+    .info-box {
+      background: rgba(0, 229, 255, 0.04);
+      border: 1px solid rgba(0, 229, 255, 0.18);
+      border-radius: 4px;
+      padding: 12px;
+    }
+
+    .info-box h3 {
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent3);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .info-box p {
+      font-size: 10px;
+      color: var(--text);
+      line-height: 1.65;
+      margin-bottom: 8px;
+    }
+
+    .tag-group { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+
+    .tag {
+      font-size: 9px;
+      padding: 2px 7px;
+      border-radius: 3px;
+    }
+
+    .tag-use { background: rgba(170,255,0,0.09); color: var(--accent3); border: 1px solid rgba(170,255,0,0.2); }
+    .tag-pro { background: rgba(0,229,255,0.08); color: var(--accent);  border: 1px solid rgba(0,229,255,0.2); }
+    .tag-con { background: rgba(255,61,107,0.08); color: var(--accent2); border: 1px solid rgba(255,61,107,0.2); }
+
+    /* ── Stats Grid ── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat-cell {
+      background: rgba(255,255,255,0.02);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 10px 8px 8px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: var(--muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Add Button ── */
+    .add-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      margin-top: 12px;
+      background: rgba(0, 229, 255, 0.08);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--accent);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: background 0.15s;
+    }
+
+    .add-btn:hover:not(:disabled) { background: rgba(0, 229, 255, 0.18); }
+
+    .add-btn:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+
+    .remove-btn {
+      display: block;
+      width: 100%;
+      padding: 9px 12px;
+      margin-top: 6px;
+      background: rgba(255, 61, 107, 0.07);
+      border: 1px solid var(--accent2);
+      border-radius: 4px;
+      color: var(--accent2);
+      font-family: 'Syne', sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      transition: background 0.15s;
+    }
+
+    .remove-btn:hover:not(:disabled) { background: rgba(255, 61, 107, 0.18); }
+
+    .remove-btn:disabled {
+      opacity: 0.28;
+      cursor: not-allowed;
+      border-color: var(--muted);
+      color: var(--muted);
+    }
+
+    .lighting-notice {
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--border);
+      margin-top: auto;
+    }
+
+    .lighting-notice p {
+      font-size: 9px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .lighting-notice strong { color: var(--text); }
+
+    /* ── Editable number inputs beside sliders ── */
+    .num-input {
+      width: 52px;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--accent);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 10px;
+      text-align: right;
+      padding: 0 2px 1px;
+      outline: none;
+      appearance: textfield;
+      -moz-appearance: textfield;
+    }
+    .num-input::-webkit-inner-spin-button,
+    .num-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .num-input:focus { border-bottom-color: var(--accent); }
+    .num-suffix { color: var(--muted); font-size: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- ── 3D Viewport ── -->
+<div id="viewport"></div>
+
+<!-- ── Right Panel ── -->
+<div id="panel">
+
+  <div class="panel-header">
+    <h1>Object Representation</h1>
+    <p>3D Graphics Pipeline — Stage 1</p>
+    <p id="sel-label" class="sel-indicator">No object selected</p>
+  </div>
+
+  <!-- Add Object -->
+  <div class="section" id="add-section">
+    <div class="section-title">Add Object</div>
+    <div class="select-row">
+      <select id="sel-shape">
+        <option value="">— choose shape —</option>
+        <option value="cube">Cube</option>
+        <option value="sphere">Sphere</option>
+        <option value="cylinder">Cylinder</option>
+        <option value="rectprism">Rectangular Prism</option>
+      </select>
+    </div>
+    <div id="dim-inputs"></div>
+    <button class="add-btn" id="btn-add" disabled>Add to Scene</button>
+    <button class="remove-btn" id="btn-remove" disabled>Remove Selected</button>
+  </div>
+
+  <!-- Rep Type Buttons -->
+  <div class="section">
+    <div class="section-title">Representation Type</div>
+    <button class="rep-btn" data-rep="pointcloud">① Point Cloud</button>
+    <button class="rep-btn"        data-rep="brep">② B-Rep / Mesh</button>
+    <button class="rep-btn"        data-rep="voxel">③ Voxel Grid</button>
+    <button class="rep-btn"        data-rep="sweep">④ Sweep Surface</button>
+  </div>
+
+  <!-- Parameters -->
+  <div class="section" id="params-section">
+    <div class="section-title">Parameters</div>
+    <div id="params-content"></div>
+  </div>
+
+  <!-- Technique Info -->
+  <div class="section">
+    <div class="section-title">Technique Info</div>
+    <div class="info-box" id="info-box"></div>
+  </div>
+
+  <!-- Scene Stats -->
+  <div class="section">
+    <div class="section-title">Scene Stats</div>
+    <div class="stats-grid">
+      <div class="stat-cell">
+        <div class="stat-value" id="stat-objects">0</div>
+        <div class="stat-label">Objects</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value" id="stat-verts">—</div>
+        <div class="stat-label">Total Vertices</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value" id="stat-secondary">—</div>
+        <div class="stat-label">Total Triangles</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-value" id="stat-rep">—</div>
+        <div class="stat-label">Selected Rep</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lighting Notice -->
+  <div class="lighting-notice">
+    <p><span style="color:var(--accent2)">■</span> <strong>Lighting disabled</strong> — illumination effects are applied in Stage 4.</p>
+  </div>
+
+</div>
+
+<!-- Three.js r128 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+'use strict';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  RENDERER / SCENE / CAMERA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const viewport = document.getElementById('viewport');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+renderer.shadowMap.enabled = false;
+viewport.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0a0f);
+
+const camera = new THREE.PerspectiveCamera(
+  44,
+  viewport.clientWidth / viewport.clientHeight,
+  0.01, 100
+);
+
+// ── Ground Grid ───────────────────────────────────────────────────────────────
+const grid = new THREE.GridHelper(40, 40, 0x1e1e3a, 0x161626);
+grid.position.y = 0;
+scene.add(grid);
+
+// ── Axes Helper (X=red, Y=green, Z=blue) ─────────────────────────────────────
+const axes = new THREE.AxesHelper(2);
+scene.add(axes);
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VASE PROFILE DATA
+//  Vector2(radius, height) — the 2D silhouette used for all representations
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const VASE_PROFILE = [
+  new THREE.Vector2(0.04, 0.00),   // base centre
+  new THREE.Vector2(0.28, 0.03),   // base edge
+  new THREE.Vector2(0.36, 0.14),
+  new THREE.Vector2(0.42, 0.27),   // belly
+  new THREE.Vector2(0.40, 0.42),
+  new THREE.Vector2(0.30, 0.57),   // waist start
+  new THREE.Vector2(0.22, 0.72),   // waist
+  new THREE.Vector2(0.20, 0.84),
+  new THREE.Vector2(0.24, 0.94),   // neck
+  new THREE.Vector2(0.30, 1.04),
+  new THREE.Vector2(0.31, 1.14),   // lip
+  new THREE.Vector2(0.26, 1.22),
+  new THREE.Vector2(0.16, 1.28),   // rim
+];
+
+const VASE_HEIGHT = VASE_PROFILE[VASE_PROFILE.length - 1].y;
+const VASE_MAX_R  = Math.max(...VASE_PROFILE.map(p => p.x));
+const VASE_CENTER_Y = VASE_HEIGHT / 2; // offset so vase sits on grid
+
+/** Interpolate vase radius at a given world Y (local space, 0 = base) */
+function vaseRadiusAt(localY) {
+  if (localY <= VASE_PROFILE[0].y)                          return VASE_PROFILE[0].x;
+  if (localY >= VASE_PROFILE[VASE_PROFILE.length - 1].y)   return VASE_PROFILE[VASE_PROFILE.length - 1].x;
+  for (let i = 0; i < VASE_PROFILE.length - 1; i++) {
+    const a = VASE_PROFILE[i], b = VASE_PROFILE[i + 1];
+    if (localY >= a.y && localY <= b.y) {
+      const t = (localY - a.y) / (b.y - a.y);
+      return a.x * (1 - t) + b.x * t;
+    }
+  }
+  return 0;
+}
+
+/** Alternate profile generators (for Sweep Surface selector) */
+function makeCylinderProfile() {
+  const pts = [];
+  const r = 0.30;
+  const steps = 10;
+  pts.push(new THREE.Vector2(0.02, 0));
+  pts.push(new THREE.Vector2(r,    0.02));
+  for (let i = 1; i <= steps; i++) {
+    pts.push(new THREE.Vector2(r, i * (VASE_HEIGHT / steps)));
+  }
+  pts.push(new THREE.Vector2(0.02, VASE_HEIGHT));
+  return pts;
+}
+
+function makeConeProfile() {
+  const pts = [];
+  const steps = 10;
+  pts.push(new THREE.Vector2(0.02, 0));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    pts.push(new THREE.Vector2(0.04 + t * 0.42, t * VASE_HEIGHT));
+  }
+  return pts;
+}
+
+function makeHourglassProfile() {
+  const pts = [];
+  const steps = 16;
+  pts.push(new THREE.Vector2(0.02, 0));
+  pts.push(new THREE.Vector2(0.38, 0.03));
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    // hourglass: wide at top and bottom, narrow in middle
+    const r = 0.38 * Math.abs(Math.cos(Math.PI * t)) + 0.10;
+    pts.push(new THREE.Vector2(r, t * VASE_HEIGHT));
+  }
+  return pts;
+}
+
+function getProfilePoints(profileKey) {
+  switch (profileKey) {
+    case 'cylinder':  return makeCylinderProfile();
+    case 'cone':      return makeConeProfile();
+    case 'hourglass': return makeHourglassProfile();
+    default:          return VASE_PROFILE;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PRIMITIVES CATALOGUE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const PRIMITIVE_COLORS = {
+  cube:      0x4a7fc1,   // muted blue
+  rectprism: 0x9060c8,   // muted purple
+  sphere:    0xd46060,   // muted coral
+  cylinder:  0x50a070,   // muted green
+  cone:      0xe8963c,   // muted amber
+  pyramid:   0xd4c040,   // muted yellow
+  triprism:  0x3cb88e,   // muted teal
+  torus:     0xb850a0,   // muted magenta
+  torusknot: 0x8050c8,   // muted violet
+  icosa:     0xd07050,   // muted warm orange
+  vase:      0xb09070,   // muted clay
+};
+
+const PRIMITIVES = {
+  cube: {
+    label: 'Cube',
+    dims: [{ id:'side', label:'Side length', min:0.2, max:4, step:0.1, def:1.0 }],
+    groundY: d => d.side / 2,
+    makeGeo: d => new THREE.BoxGeometry(d.side, d.side, d.side),
+  },
+  rectprism: {
+    label: 'Rectangular Prism',
+    dims: [
+      { id:'width',  label:'Width',  min:0.1, max:5, step:0.1, def:1.2 },
+      { id:'height', label:'Height', min:0.1, max:5, step:0.1, def:0.7 },
+      { id:'depth',  label:'Depth',  min:0.1, max:5, step:0.1, def:0.8 },
+    ],
+    groundY: d => d.height / 2,
+    makeGeo: d => new THREE.BoxGeometry(d.width, d.height, d.depth),
+  },
+  sphere: {
+    label: 'Sphere',
+    dims: [{ id:'radius', label:'Radius', min:0.1, max:3, step:0.1, def:0.6 }],
+    groundY: d => d.radius,
+    makeGeo: d => new THREE.SphereGeometry(d.radius, 32, 16),
+  },
+  cylinder: {
+    label: 'Cylinder',
+    dims: [
+      { id:'radius', label:'Radius', min:0.1, max:3, step:0.1, def:0.5 },
+      { id:'height', label:'Height', min:0.2, max:6, step:0.1, def:1.2 },
+    ],
+    groundY: d => d.height / 2,
+    makeGeo: d => new THREE.CylinderGeometry(d.radius, d.radius, d.height, 36),
+  },
+  cone: {
+    label: 'Cone',
+    dims: [
+      { id:'radius', label:'Base Radius', min:0.1, max:3, step:0.1, def:0.5 },
+      { id:'height', label:'Height',      min:0.2, max:6, step:0.1, def:1.2 },
+    ],
+    groundY: d => d.height / 2,
+    makeGeo:  d => new THREE.ConeGeometry(d.radius, d.height, 36),
+  },
+  pyramid: {
+    label: 'Pyramid',
+    dims: [
+      { id:'radius', label:'Base Radius', min:0.1, max:3, step:0.1, def:0.5 },
+      { id:'height', label:'Height',      min:0.2, max:6, step:0.1, def:1.2 },
+    ],
+    groundY: d => d.height / 2,
+    makeGeo:  d => new THREE.ConeGeometry(d.radius, d.height, 4),
+  },
+  triprism: {
+    label: 'Triangular Prism',
+    dims: [
+      { id:'radius', label:'Radius', min:0.1, max:3, step:0.1, def:0.5 },
+      { id:'height', label:'Height', min:0.2, max:6, step:0.1, def:1.2 },
+    ],
+    groundY: d => d.height / 2,
+    makeGeo:  d => new THREE.CylinderGeometry(d.radius, d.radius, d.height, 3),
+  },
+  torus: {
+    label: 'Torus',
+    dims: [
+      { id:'radius', label:'Ring Radius', min:0.2, max:2,    step:0.1,  def:0.5  },
+      { id:'tube',   label:'Tube Radius', min:0.05, max:0.8, step:0.05, def:0.18 },
+    ],
+    groundY: d => d.tube,
+    makeGeo:  d => new THREE.TorusGeometry(d.radius, d.tube, 16, 64),
+  },
+  torusknot: {
+    label: 'Torus Knot',
+    dims: [
+      { id:'radius', label:'Ring Radius', min:0.2,  max:1.5, step:0.1,  def:0.45 },
+      { id:'tube',   label:'Tube Radius', min:0.03, max:0.4, step:0.01, def:0.12 },
+    ],
+    groundY: d => d.radius + d.tube,
+    makeGeo:  d => new THREE.TorusKnotGeometry(d.radius, d.tube, 100, 16),
+  },
+  icosa: {
+    label: 'Icosahedron',
+    dims: [
+      { id:'radius', label:'Radius', min:0.1, max:3, step:0.1, def:0.6 },
+    ],
+    groundY: d => d.radius,
+    makeGeo:  d => new THREE.IcosahedronGeometry(d.radius, 0),
+  },
+  vase: {
+    label: 'Vase / Urn',
+    dims:    [],
+    groundY: () => 0,
+    makeGeo:  () => new THREE.LatheGeometry(VASE_PROFILE, 48),
+  },
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  USER OBJECTS REGISTRY
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let userObjects  = [];   // [{ id, type, label, dims, slot, mesh }]
+let nextObjectId = 1;
+
+/** Find the lowest slot index not occupied by an existing object. */
+function getNextFreeSlot() {
+  const used = new Set(userObjects.map(o => o.slot));
+  for (let i = 0; ; i++) if (!used.has(i)) return i;
+}
+
+/** Convert a slot index to a staggered world X position. */
+function slotToX(slot) {
+  // Even slots: 0, 2.5, 5, … (right side)
+  // Odd slots:  -2.5, -5, … (left side)
+  const half = Math.ceil(slot / 2) * 2.5;
+  return slot % 2 === 0 ? (slot / 2) * 2.5 : -half;
+}
+
+/** Create a new user object with flat material, add to scene, register it. */
+function addUserObject(type, dims) {
+  const def  = PRIMITIVES[type];
+  const geo  = def.makeGeo(dims);
+  const mat  = new THREE.MeshBasicMaterial({
+    color: PRIMITIVE_COLORS[type],
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  const slot = getNextFreeSlot();
+  mesh.position.set(slotToX(slot), PRIMITIVES[type].groundY(dims), 0);
+  scene.add(mesh);
+
+  const obj = {
+    id:        nextObjectId++,
+    type,
+    label:     def.label,
+    dims:      { ...dims },
+    slot,
+    mesh,
+    rep:       'brep',
+    repState: {
+      pointcloud: { ...DEFAULT_REP_STATE.pointcloud },
+      brep:       { ...DEFAULT_REP_STATE.brep },
+      voxel:      { ...DEFAULT_REP_STATE.voxel },
+      sweep:      { ...DEFAULT_REP_STATE.sweep },
+    },
+    repMeshes: [],
+  };
+  userObjects.push(obj);
+  updateStats();
+  return obj;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PER-OBJECT DEFAULT REP STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const DEFAULT_REP_STATE = {
+  pointcloud: { size: 0.015, density: 2000 },
+  brep:       { wireframe: false, normals: false },
+  voxel:      { resolution: 6 },
+  sweep:      { angle: 360 },
+};
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  REPRESENTATION BUILDERS (per-object)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ── Helper: show/hide the base mesh without breaking raycasting ───────────────
+function showMesh(obj, visible) {
+  obj.mesh.material.transparent = !visible;
+  obj.mesh.material.opacity     = visible ? 1 : 0;
+  obj.mesh.material.depthWrite  = visible;
+  obj.mesh.material.needsUpdate = true;
+}
+
+// ── Helper: clear all rep-scene objects (but keep selection edge child) ────────
+function clearRepMeshes(obj) {
+  for (const m of obj.repMeshes) {
+    scene.remove(m);
+    if (m.geometry) m.geometry.dispose();
+    if (m.material) {
+      if (Array.isArray(m.material)) m.material.forEach(x => x.dispose());
+      else m.material.dispose();
+    }
+  }
+  obj.repMeshes = [];
+  // Remove B-Rep overlays (wireframe/normals) that are children of obj.mesh,
+  // but preserve the selection edge overlay (tracked by selEdges).
+  const toRemove = obj.mesh.children.filter(c => c !== selEdges);
+  for (const c of toRemove) {
+    obj.mesh.remove(c);
+    if (c.geometry) c.geometry.dispose();
+    if (c.material) c.material.dispose();
+  }
+}
+
+// ── Surface samplers ─────────────────────────────────────────────────────────
+function sampleSurface(obj, density) {
+  const { type, dims } = obj;
+  const pts = [];
+
+  if (type === 'cube') {
+    const s = dims.side;
+    const hs = s / 2;
+    const faces = [
+      (u, v) => [ hs, u*s-hs, v*s-hs], (u, v) => [-hs, u*s-hs, v*s-hs],
+      (u, v) => [u*s-hs,  hs, v*s-hs], (u, v) => [u*s-hs, -hs, v*s-hs],
+      (u, v) => [u*s-hs, v*s-hs,  hs], (u, v) => [u*s-hs, v*s-hs, -hs],
+    ];
+    const n = Math.ceil(density / 6);
+    for (const f of faces) for (let i = 0; i < n; i++) {
+      const [x, y, z] = f(Math.random(), Math.random());
+      pts.push(x, y, z);
+    }
+  } else if (type === 'rectprism') {
+    const hw = dims.width/2, hh = dims.height/2, hd = dims.depth/2;
+    const faces = [
+      (u,v)=>[ hw, u*dims.height-hh, v*dims.depth-hd],
+      (u,v)=>[-hw, u*dims.height-hh, v*dims.depth-hd],
+      (u,v)=>[ u*dims.width-hw,  hh, v*dims.depth-hd],
+      (u,v)=>[ u*dims.width-hw, -hh, v*dims.depth-hd],
+      (u,v)=>[ u*dims.width-hw, v*dims.height-hh,  hd],
+      (u,v)=>[ u*dims.width-hw, v*dims.height-hh, -hd],
+    ];
+    const n = Math.ceil(density / 6);
+    for (const f of faces) for (let i = 0; i < n; i++) {
+      const [x, y, z] = f(Math.random(), Math.random());
+      pts.push(x, y, z);
+    }
+  } else if (type === 'sphere') {
+    const r = dims.radius;
+    for (let i = 0; i < density; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      pts.push(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(theta));
+    }
+  } else if (type === 'cylinder') {
+    const r = dims.radius, h = dims.height;
+    const sideA = 2*Math.PI*r*h, capA = Math.PI*r*r, total = sideA + 2*capA;
+    for (let i = 0; i < density; i++) {
+      const rnd = Math.random() * total;
+      if (rnd < sideA) {
+        const theta = Math.random()*Math.PI*2;
+        pts.push(r*Math.cos(theta), (Math.random()-0.5)*h, r*Math.sin(theta));
+      } else if (rnd < sideA + capA) {
+        const cr = r*Math.sqrt(Math.random()), t = Math.random()*Math.PI*2;
+        pts.push(cr*Math.cos(t), h/2, cr*Math.sin(t));
+      } else {
+        const cr = r*Math.sqrt(Math.random()), t = Math.random()*Math.PI*2;
+        pts.push(cr*Math.cos(t), -h/2, cr*Math.sin(t));
+      }
+    }
+  } else if (type === 'cone') {
+    // ConeGeometry: apex at +Y (h/2), base at -Y (-h/2)
+    const r = dims.radius, h = dims.height;
+    for (let i = 0; i < density; i++) {
+      if (Math.random() > 0.12) {
+        const t = Math.sqrt(Math.random()); // area-weighted toward base
+        const a = Math.random() * Math.PI * 2;
+        pts.push(r*t*Math.cos(a), h/2 - t*h, r*t*Math.sin(a));
+      } else {
+        const cr = r * Math.sqrt(Math.random()), a = Math.random() * Math.PI * 2;
+        pts.push(cr*Math.cos(a), -h/2, cr*Math.sin(a));
+      }
+    }
+  } else if (type === 'pyramid') {
+    // ConeGeometry radialSegments=4: apex at +Y, square base at -Y
+    const r = dims.radius, h = dims.height;
+    for (let i = 0; i < density; i++) {
+      if (Math.random() > 0.15) {
+        const t = Math.sqrt(Math.random());
+        const face = Math.floor(Math.random() * 4);
+        const a = (face + Math.random()) * Math.PI / 2;
+        pts.push(r*t*Math.cos(a), h/2 - t*h, r*t*Math.sin(a));
+      } else {
+        pts.push((Math.random()*2-1)*r*0.72, -h/2, (Math.random()*2-1)*r*0.72);
+      }
+    }
+  } else if (type === 'triprism' || type === 'torusknot') {
+    const posArr = obj.mesh.geometry.attributes.position.array;
+    const n = posArr.length / 3;
+    for (let i = 0; i < density; i++) {
+      const idx = Math.floor(Math.random() * n) * 3;
+      pts.push(posArr[idx], posArr[idx+1], posArr[idx+2]);
+    }
+  } else if (type === 'torus') {
+    const R = dims.radius, r = dims.tube;
+    for (let i = 0; i < density; i++) {
+      const u = Math.random() * Math.PI * 2;
+      const v = Math.random() * Math.PI * 2;
+      pts.push((R + r*Math.cos(v))*Math.cos(u), r*Math.sin(v), (R + r*Math.cos(v))*Math.sin(u));
+    }
+  } else if (type === 'icosa') {
+    const r = dims.radius;
+    for (let i = 0; i < density; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi   = Math.acos(2 * Math.random() - 1);
+      pts.push(r*Math.sin(phi)*Math.cos(theta), r*Math.cos(phi), r*Math.sin(phi)*Math.sin(theta));
+    }
+  } else if (type === 'vase') {
+    for (let i = 0; i < density; i++) {
+      const j = Math.floor(Math.random() * (VASE_PROFILE.length - 1));
+      const a = VASE_PROFILE[j], b = VASE_PROFILE[j + 1];
+      const t = Math.random();
+      const ri = a.x*(1-t) + b.x*t;
+      const y  = a.y*(1-t) + b.y*t;
+      const angle = Math.random() * Math.PI * 2;
+      pts.push(ri*Math.cos(angle), y, ri*Math.sin(angle));
+    }
+  }
+  return new Float32Array(pts);
+}
+
+// ── Voxel containment tests ───────────────────────────────────────────────────
+function isInsideObj(type, dims, lx, ly, lz) {
+  switch (type) {
+    case 'cube':      return Math.abs(lx)<=dims.side/2 && Math.abs(ly)<=dims.side/2   && Math.abs(lz)<=dims.side/2;
+    case 'rectprism': return Math.abs(lx)<=dims.width/2 && Math.abs(ly)<=dims.height/2 && Math.abs(lz)<=dims.depth/2;
+    case 'sphere':    return lx*lx+ly*ly+lz*lz <= dims.radius*dims.radius;
+    case 'cylinder':  return lx*lx+lz*lz <= dims.radius*dims.radius && Math.abs(ly)<=dims.height/2;
+    case 'cone': {
+      const halfH = dims.height / 2;
+      if (ly < -halfH || ly > halfH) return false;
+      const rAtY = dims.radius * (halfH - ly) / dims.height; // apex at +Y
+      return lx*lx + lz*lz <= rAtY*rAtY;
+    }
+    case 'pyramid': {
+      const halfH = dims.height / 2;
+      if (ly < -halfH || ly > halfH) return false;
+      const rAtY = dims.radius * (halfH - ly) / dims.height;
+      return Math.abs(lx) + Math.abs(lz) <= rAtY; // diamond cross-section
+    }
+    case 'triprism': {
+      if (Math.abs(ly) > dims.height / 2) return false;
+      return lx*lx + lz*lz <= (dims.radius * 0.5) * (dims.radius * 0.5); // inscribed circle
+    }
+    case 'torus': {
+      const d = Math.sqrt(lx*lx + lz*lz) - dims.radius;
+      return d*d + ly*ly <= dims.tube * dims.tube;
+    }
+    case 'torusknot': {
+      const d = Math.sqrt(lx*lx + lz*lz) - dims.radius;
+      const r = dims.tube * 1.6;
+      return d*d + ly*ly <= r*r;
+    }
+    case 'icosa':
+      return lx*lx + ly*ly + lz*lz <= dims.radius * dims.radius;
+    case 'vase': {
+      const localY = ly + VASE_HEIGHT / 2;
+      if (localY < 0 || localY > VASE_HEIGHT) return false;
+      const rAtY = vaseRadiusAt(localY);
+      return lx*lx + lz*lz <= rAtY*rAtY;
+    }
+    default:          return false;
+  }
+}
+
+// ── Sweep profiles ────────────────────────────────────────────────────────────
+function getSweepProfile(obj) {
+  const { type, dims } = obj;
+  const pts = [];
+  switch (type) {
+    case 'sphere': {
+      const r = dims.radius, steps = 24;
+      for (let i = 0; i <= steps; i++) {
+        const phi = (i / steps) * Math.PI;
+        pts.push(new THREE.Vector2(r * Math.sin(phi), r * Math.cos(phi)));
+      }
+      break;
+    }
+    case 'cylinder': {
+      const r = dims.radius, h = dims.height;
+      pts.push(new THREE.Vector2(0.01,  h/2), new THREE.Vector2(r, h/2),
+               new THREE.Vector2(r,    -h/2), new THREE.Vector2(0.01, -h/2));
+      break;
+    }
+    case 'cube': {
+      const s = dims.side;
+      pts.push(new THREE.Vector2(0.01, s/2), new THREE.Vector2(s/2,  s/2),
+               new THREE.Vector2(s/2, -s/2), new THREE.Vector2(0.01, -s/2));
+      break;
+    }
+    case 'rectprism': {
+      const r = Math.max(dims.width, dims.depth)/2, h = dims.height;
+      pts.push(new THREE.Vector2(0.01, h/2), new THREE.Vector2(r, h/2),
+               new THREE.Vector2(r,  -h/2), new THREE.Vector2(0.01, -h/2));
+      break;
+    }
+    case 'cone':
+    case 'pyramid': {
+      const r = dims.radius, halfH = dims.height / 2;
+      pts.push(new THREE.Vector2(0.01,  halfH),
+               new THREE.Vector2(r,    -halfH),
+               new THREE.Vector2(0.01, -halfH));
+      break;
+    }
+    case 'triprism': {
+      const r = dims.radius, h = dims.height;
+      pts.push(new THREE.Vector2(0.01, h/2), new THREE.Vector2(r, h/2),
+               new THREE.Vector2(r,  -h/2), new THREE.Vector2(0.01, -h/2));
+      break;
+    }
+    case 'torus':
+    case 'torusknot': {
+      const R = dims.radius, r = dims.tube;
+      for (let i = 0; i <= 24; i++) {
+        const theta = (i / 24) * Math.PI * 2;
+        pts.push(new THREE.Vector2(R + r*Math.cos(theta), r*Math.sin(theta)));
+      }
+      break;
+    }
+    case 'icosa': {
+      const r = dims.radius;
+      for (let i = 0; i <= 24; i++) {
+        const phi = (i / 24) * Math.PI;
+        pts.push(new THREE.Vector2(r*Math.sin(phi), r*Math.cos(phi)));
+      }
+      break;
+    }
+    case 'vase':
+      return VASE_PROFILE.slice();
+    default:
+      pts.push(new THREE.Vector2(0.01,0.5), new THREE.Vector2(0.5,0), new THREE.Vector2(0.01,-0.5));
+  }
+  return pts;
+}
+
+// ── 1. Point Cloud ────────────────────────────────────────────────────────────
+function buildPointCloudForObj(obj) {
+  showMesh(obj, false);
+  const { size, density } = obj.repState.pointcloud;
+  const positions = sampleSurface(obj, density);
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color: 0x00e5ff, size, sizeAttenuation: true });
+  const pts = new THREE.Points(geo, mat);
+  pts.position.copy(obj.mesh.position);
+  scene.add(pts);
+  obj.repMeshes.push(pts);
+}
+
+// ── 2. B-Rep (Polygon Mesh) ───────────────────────────────────────────────────
+function buildBRepForObj(obj) {
+  showMesh(obj, true);
+  const { wireframe, normals } = obj.repState.brep;
+  const geo = obj.mesh.geometry;
+
+  if (wireframe) {
+    const edgesGeo = new THREE.EdgesGeometry(geo);
+    const edgesMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.55 });
+    obj.mesh.add(new THREE.LineSegments(edgesGeo, edgesMat));
+  }
+
+  if (normals) {
+    if (!geo.attributes.normal) geo.computeVertexNormals();
+    const posArr  = geo.attributes.position.array;
+    const normArr = geo.attributes.normal.array;
+    const vCount  = geo.attributes.position.count;
+    const skip    = Math.max(1, Math.floor(vCount / 200));
+    const normPts = [];
+    for (let i = 0; i < vCount; i += skip) {
+      const px=posArr[i*3], py=posArr[i*3+1], pz=posArr[i*3+2];
+      const nx=normArr[i*3],ny=normArr[i*3+1],nz=normArr[i*3+2];
+      const L = 0.12;
+      normPts.push(px,py,pz, px+nx*L,py+ny*L,pz+nz*L);
+    }
+    const normGeo = new THREE.BufferGeometry();
+    normGeo.setAttribute('position', new THREE.Float32BufferAttribute(normPts, 3));
+    obj.mesh.add(new THREE.LineSegments(normGeo, new THREE.LineBasicMaterial({ color: 0xaaff00 })));
+  }
+}
+
+// ── 3. Voxel Grid ─────────────────────────────────────────────────────────────
+function buildVoxelGridForObj(obj) {
+  showMesh(obj, false);
+  const { type, dims, mesh } = obj;
+  const res = obj.repState.voxel.resolution;
+
+  const bbox = new THREE.Box3().setFromObject(mesh);
+  const size = new THREE.Vector3();
+  bbox.getSize(size);
+  const bboxCenter = new THREE.Vector3();
+  bbox.getCenter(bboxCenter);
+  const cellSize = Math.max(size.x, size.y, size.z) / res;
+  const nx = Math.ceil(size.x / cellSize);
+  const ny = Math.ceil(size.y / cellSize);
+  const nz = Math.ceil(size.z / cellSize);
+  const gap = 0.08;
+  const boxSize = cellSize * (1 - gap);
+
+  const filled = [];
+  for (let xi = 0; xi < nx; xi++) {
+    for (let yi = 0; yi < ny; yi++) {
+      for (let zi = 0; zi < nz; zi++) {
+        const lx = (xi + 0.5) * cellSize - size.x / 2;
+        const ly = (yi + 0.5) * cellSize - size.y / 2;
+        const lz = (zi + 0.5) * cellSize - size.z / 2;
+        if (isInsideObj(type, dims, lx, ly, lz))
+          filled.push(lx + bboxCenter.x, ly + bboxCenter.y, lz + bboxCenter.z);
+      }
+    }
+  }
+  if (filled.length === 0) return;
+
+  const count  = filled.length / 3;
+  const boxGeo = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+  const boxMat = new THREE.MeshBasicMaterial({ color: 0x00c8e8, transparent: true, opacity: 0.9, side: THREE.DoubleSide });
+  const iMesh  = new THREE.InstancedMesh(boxGeo, boxMat, count);
+  iMesh.frustumCulled = false;
+
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    dummy.position.set(filled[i*3], filled[i*3+1], filled[i*3+2]);
+    dummy.updateMatrix();
+    iMesh.setMatrixAt(i, dummy.matrix);
+  }
+  iMesh.instanceMatrix.needsUpdate = true;
+  scene.add(iMesh);
+  obj.repMeshes.push(iMesh);
+}
+
+// ── 4. Sweep Surface ──────────────────────────────────────────────────────────
+function buildSweepForObj(obj) {
+  showMesh(obj, false);
+  const { angle } = obj.repState.sweep;
+  const profile   = getSweepProfile(obj);
+  const segments  = Math.max(4, Math.round((angle / 360) * 80));
+
+  const geo = new THREE.LatheGeometry(profile, segments, 0, angle * (Math.PI / 180));
+  const mat = new THREE.MeshBasicMaterial({ color: PRIMITIVE_COLORS[obj.type], side: THREE.DoubleSide });
+  const swMesh = new THREE.Mesh(geo, mat);
+  swMesh.position.copy(obj.mesh.position);
+  scene.add(swMesh);
+  obj.repMeshes.push(swMesh);
+
+  const profileVerts = profile.map(p => new THREE.Vector3(p.x, p.y, 0));
+  const profileGeo   = new THREE.BufferGeometry().setFromPoints(profileVerts);
+  const profileLine  = new THREE.Line(profileGeo, new THREE.LineBasicMaterial({ color: 0xaaff00 }));
+  profileLine.position.copy(obj.mesh.position);
+  scene.add(profileLine);
+  obj.repMeshes.push(profileLine);
+
+  const dotGeo = new THREE.BufferGeometry().setFromPoints(profileVerts);
+  const dots   = new THREE.Points(dotGeo, new THREE.PointsMaterial({ color: 0xaaff00, size: 0.03, sizeAttenuation: true }));
+  dots.position.copy(obj.mesh.position);
+  scene.add(dots);
+  obj.repMeshes.push(dots);
+}
+
+// ── Dispatch ──────────────────────────────────────────────────────────────────
+function buildRepForObj(obj) {
+  clearRepMeshes(obj);
+  switch (obj.rep) {
+    case 'pointcloud': buildPointCloudForObj(obj); break;
+    case 'brep':       buildBRepForObj(obj);       break;
+    case 'voxel':      buildVoxelGridForObj(obj);  break;
+    case 'sweep':      buildSweepForObj(obj);      break;
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STATS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function fmt(n) {
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+  if (n >= 1000)    return (n / 1000).toFixed(1) + 'k';
+  return String(n);
+}
+
+const REP_LABELS = {
+  pointcloud: 'Pts',
+  brep:       'B-Rep',
+  voxel:      'Voxels',
+  sweep:      'Sweep',
+};
+
+function updateStats() {
+  let totalVerts = 0, totalTris = 0;
+  for (const obj of userObjects) {
+    const geo = obj.mesh.geometry;
+    totalVerts += geo.attributes.position.count;
+    totalTris  += geo.index
+      ? geo.index.count / 3
+      : geo.attributes.position.count / 3;
+  }
+  const n = userObjects.length;
+  document.getElementById('stat-objects').textContent   = String(n);
+  document.getElementById('stat-verts').textContent     = n ? fmt(totalVerts) : '—';
+  document.getElementById('stat-secondary').textContent = n ? fmt(Math.round(totalTris)) : '—';
+  document.getElementById('stat-rep').textContent       = selectedObj ? REP_LABELS[selectedObj.rep] : '—';
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TECHNIQUE INFO
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const INFO = {
+  pointcloud: {
+    title: 'Point Cloud (Point-Sample)',
+    body:  'A set of discrete 3D points sampled from the object\'s surface. No connectivity — just XYZ coordinates. Real-world 3D scanners (LiDAR, structured light) produce point clouds. Denser clouds capture finer detail.',
+    uses:  ['LiDAR scanning', 'Photogrammetry', 'Medical imaging'],
+    pros:  ['Simple data structure', 'Easy to acquire'],
+    cons:  ['No surface topology', 'High memory at detail', 'Rendering requires splatting'],
+  },
+  brep: {
+    title: 'B-Rep — Boundary Representation',
+    body:  'Defines an object by its surface: a list of vertices connected into triangular (or polygonal) faces. Separates interior from exterior. The dominant representation in real-time 3D graphics and most 3D file formats.',
+    uses:  ['.OBJ / .FBX / .GLTF', 'Game engines', 'CAD & 3D printing'],
+    pros:  ['GPU-native & efficient', 'Supports texturing & shading'],
+    cons:  ['Surface only — no interior', 'Requires watertight mesh for CSG'],
+  },
+  voxel: {
+    title: 'Space Partitioning (Voxel Grid)',
+    body:  '3D space is divided into a uniform grid of cubic cells called voxels (volumetric pixels). Each voxel is either occupied or empty — think 3D pixels. Stores volumetric data including the interior of objects.',
+    uses:  ['Medical CT/MRI scans', 'Minecraft-style worlds', 'Volume rendering'],
+    pros:  ['Stores interior data', 'O(1) spatial lookup', 'Easy Boolean ops'],
+    cons:  ['Memory: O(n³)', 'Blocky at low res', 'Poor for thin features'],
+  },
+  sweep: {
+    title: 'Sweep Surface (Lathe / Generative)',
+    body:  'A 2D profile curve is swept along a path or rotated around an axis to generate a 3D surface. A vase is a silhouette curve rotated 360° around the Y-axis — a "lathe" operation. Extremely compact: only the 2D curve is stored.',
+    uses:  ['CAD & product design', 'Procedural modeling', 'Architectural elements'],
+    pros:  ['Compact: just one 2D curve', 'Smooth analytic surfaces', 'Easy parametric editing'],
+    cons:  ['Rotationally symmetric only', 'Requires deliberate profile design'],
+  },
+};
+
+function renderInfoBox(rep) {
+  const info = INFO[rep];
+  let html = `<h3>${info.title}</h3><p>${info.body}</p>`;
+  html += '<div class="tag-group">';
+  info.uses.forEach(u => { html += `<span class="tag tag-use">${u}</span>`; });
+  html += '</div><div class="tag-group">';
+  info.pros.forEach(p => { html += `<span class="tag tag-pro">+ ${p}</span>`; });
+  info.cons.forEach(c => { html += `<span class="tag tag-con">− ${c}</span>`; });
+  html += '</div>';
+  document.getElementById('info-box').innerHTML = html;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  PARAMETERS PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Wire a range slider and a companion number input together.
+ * onChange(value) fires whenever either control commits a new value.
+ */
+function linkSliderNumber(sliderId, numberId, min, max, step, onChange) {
+  const slider = document.getElementById(sliderId);
+  const numEl  = document.getElementById(numberId);
+  if (!slider || !numEl) return;
+
+  const decimals = step < 1 ? step.toString().split('.')[1].length : 0;
+  const fmt = v => decimals > 0 ? v.toFixed(decimals) : String(Math.round(v));
+
+  slider.addEventListener('input', () => {
+    const v = parseFloat(slider.value);
+    numEl.value = fmt(v);
+    onChange(v);
+  });
+
+  const commit = () => {
+    let v = parseFloat(numEl.value);
+    if (isNaN(v)) v = parseFloat(slider.value);
+    v = Math.min(max, Math.max(min, v));
+    // Snap to nearest step
+    v = Math.round((v - min) / step) * step + min;
+    v = Math.min(max, Math.max(min, v));
+    numEl.value = fmt(v);
+    slider.value = v;
+    onChange(v);
+  };
+
+  numEl.addEventListener('change', commit);
+  numEl.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); numEl.blur(); } });
+}
+
+function numRow(label, id, slId, min, max, step, val, suffix = '') {
+  const s = suffix ? `<span class="num-suffix">${suffix}</span>` : '';
+  return `
+    <div class="param-row">
+      <div class="param-label">${label}
+        <span style="display:flex;align-items:center;gap:2px;">
+          <input type="number" class="num-input" id="${id}" value="${val}" min="${min}" max="${max}" step="${step}">${s}
+        </span>
+      </div>
+      <input type="range" id="${slId}" min="${min}" max="${max}" step="${step}" value="${val}">
+    </div>`;
+}
+
+function renderParams(rep, obj) {
+  const el = document.getElementById('params-content');
+  const s  = obj.repState[rep];
+  let html = '';
+
+  if (rep === 'pointcloud') {
+    html  = numRow('Point Size',    'lbl-ptsize', 'sl-ptsize', 0.003, 0.05, 0.001, s.size.toFixed(3));
+    html += numRow('Point Density', 'lbl-ptdens', 'sl-ptdens', 200,   8000, 100,   s.density);
+
+  } else if (rep === 'brep') {
+    html = `
+      <div class="toggle-row">
+        <span class="toggle-label">Wireframe overlay</span>
+        <div class="toggle${s.wireframe ? ' on' : ''}" id="tog-wire"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-label">Face normals</span>
+        <div class="toggle${s.normals ? ' on' : ''}" id="tog-norm"></div>
+      </div>`;
+
+  } else if (rep === 'voxel') {
+    html = numRow('Resolution', 'lbl-voxres', 'sl-voxres', 3, 12, 1, s.resolution, '×');
+
+  } else if (rep === 'sweep') {
+    html = numRow('Sweep Angle', 'lbl-angle', 'sl-angle', 10, 360, 5, s.angle, '°');
+  }
+
+  el.innerHTML = html;
+  bindParamEvents(rep, obj);
+}
+
+function bindParamEvents(rep, obj) {
+  if (rep === 'pointcloud') {
+    linkSliderNumber('sl-ptsize', 'lbl-ptsize', 0.003, 0.05, 0.001, v => {
+      obj.repState.pointcloud.size = v;
+      buildRepForObj(obj);
+    });
+    linkSliderNumber('sl-ptdens', 'lbl-ptdens', 200, 8000, 100, v => {
+      obj.repState.pointcloud.density = Math.round(v);
+      buildRepForObj(obj);
+    });
+
+  } else if (rep === 'brep') {
+    document.getElementById('tog-wire').addEventListener('click', () => {
+      obj.repState.brep.wireframe = !obj.repState.brep.wireframe;
+      document.getElementById('tog-wire').classList.toggle('on', obj.repState.brep.wireframe);
+      buildRepForObj(obj);
+    });
+    document.getElementById('tog-norm').addEventListener('click', () => {
+      obj.repState.brep.normals = !obj.repState.brep.normals;
+      document.getElementById('tog-norm').classList.toggle('on', obj.repState.brep.normals);
+      buildRepForObj(obj);
+    });
+
+  } else if (rep === 'voxel') {
+    linkSliderNumber('sl-voxres', 'lbl-voxres', 3, 12, 1, v => {
+      obj.repState.voxel.resolution = Math.round(v);
+      buildRepForObj(obj);
+    });
+
+  } else if (rep === 'sweep') {
+    linkSliderNumber('sl-angle', 'lbl-angle', 10, 360, 5, v => {
+      obj.repState.sweep.angle = Math.round(v);
+      buildRepForObj(obj);
+    });
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  REPRESENTATION SWITCHING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Update panel to reflect the currently selected object's rep (or clear if none). */
+function updateRepPanel(obj) {
+  if (!obj) {
+    document.querySelectorAll('.rep-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('params-content').innerHTML =
+      '<p style="font-size:10px;color:var(--muted);">Select an object to change its representation.</p>';
+    document.getElementById('info-box').innerHTML = '';
+    return;
+  }
+  document.querySelectorAll('.rep-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.rep === obj.rep));
+  renderInfoBox(obj.rep);
+  renderParams(obj.rep, obj);
+}
+
+/** Switch the selected object's representation. */
+function switchRep(rep) {
+  if (!selectedObj) return;
+  selectedObj.rep = rep;
+  buildRepForObj(selectedObj);
+  updateRepPanel(selectedObj);
+  updateStats();
+}
+
+/** Remove the currently selected object from the scene entirely. */
+function removeSelectedObject() {
+  if (!selectedObj) return;
+  const obj = selectedObj;
+  deselectObject();        // clears selectedObj, removes selEdges, disables btn-remove
+  clearRepMeshes(obj);
+  scene.remove(obj.mesh);
+  obj.mesh.geometry.dispose();
+  obj.mesh.material.dispose();
+  userObjects = userObjects.filter(o => o !== obj);
+  updateStats();
+}
+
+document.querySelectorAll('.rep-btn').forEach(btn => {
+  btn.addEventListener('click', () => switchRep(btn.dataset.rep));
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ADD OBJECT PANEL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let currentAddType = '';
+let currentAddDims = {};
+
+function renderDimInputs(type) {
+  const container = document.getElementById('dim-inputs');
+  const btnAdd    = document.getElementById('btn-add');
+  if (!type) {
+    container.innerHTML = '';
+    btnAdd.disabled = true;
+    return;
+  }
+
+  const def = PRIMITIVES[type];
+  currentAddDims = {};
+  def.dims.forEach(d => { currentAddDims[d.id] = d.def; });
+
+  if (def.dims.length === 0) {
+    container.innerHTML =
+      '<p style="font-size:10px;color:var(--muted);margin-top:8px;">No dimensions — uses fixed profile.</p>';
+  } else {
+    let html = '';
+    def.dims.forEach(d => {
+      const dec = d.step < 1 ? d.step.toString().split('.')[1].length : 0;
+      const displayVal = dec > 0 ? d.def.toFixed(dec) : String(Math.round(d.def));
+      html += `
+        <div class="param-row" style="margin-top:10px;">
+          <div class="param-label">${d.label}
+            <input type="number" class="num-input" id="dimval-${d.id}" value="${displayVal}" min="${d.min}" max="${d.max}" step="${d.step}">
+          </div>
+          <input type="range" id="dimsld-${d.id}" min="${d.min}" max="${d.max}" step="${d.step}" value="${d.def}">
+        </div>`;
+    });
+    container.innerHTML = html;
+    def.dims.forEach(d => {
+      linkSliderNumber(`dimsld-${d.id}`, `dimval-${d.id}`, d.min, d.max, d.step, v => {
+        currentAddDims[d.id] = v;
+      });
+    });
+  }
+  btnAdd.disabled = false;
+}
+
+function initAddPanel() {
+  const sel    = document.getElementById('sel-shape');
+  const btnAdd = document.getElementById('btn-add');
+
+  sel.addEventListener('change', e => {
+    currentAddType = e.target.value;
+    renderDimInputs(currentAddType);
+  });
+
+  btnAdd.addEventListener('click', () => {
+    if (!currentAddType) return;
+    addUserObject(currentAddType, { ...currentAddDims });
+    // Reset form
+    sel.value = '';
+    document.getElementById('dim-inputs').innerHTML = '';
+    btnAdd.disabled = true;
+    currentAddType = '';
+    currentAddDims = {};
+  });
+
+  document.getElementById('btn-remove').addEventListener('click', removeSelectedObject);
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SELECTION SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let selectedObj = null;   // currently selected userObject record
+let selEdges    = null;   // edge LineSegments child of selected mesh
+
+const raycaster = new THREE.Raycaster();
+const _mouse    = new THREE.Vector2();
+
+function selectObject(obj) {
+  if (selectedObj === obj) return;
+  deselectObject();
+  selectedObj = obj;
+
+  // Tint the base mesh material toward accent (visible when rep is B-Rep)
+  const base = new THREE.Color(PRIMITIVE_COLORS[obj.type]);
+  obj.mesh.material.color.copy(base.clone().lerp(new THREE.Color(0x00e5ff), 0.28));
+
+  // Edge highlight overlay as child of mesh — stays visible even when mesh is transparent
+  const edgesGeo = new THREE.EdgesGeometry(obj.mesh.geometry);
+  const edgesMat = new THREE.LineBasicMaterial({ color: 0x00e5ff, transparent: true, opacity: 0.72 });
+  selEdges = new THREE.LineSegments(edgesGeo, edgesMat);
+  obj.mesh.add(selEdges);
+
+  const labelEl = document.getElementById('sel-label');
+  labelEl.textContent = `${obj.label}  \u2014  #${obj.id}`;
+  labelEl.classList.add('active');
+
+  document.getElementById('btn-remove').disabled = false;
+  updateRepPanel(obj);
+  updateStats();
+}
+
+function deselectObject() {
+  if (!selectedObj) return;
+
+  // Restore flat colour on base mesh
+  selectedObj.mesh.material.color.setHex(PRIMITIVE_COLORS[selectedObj.type]);
+
+  if (selEdges) {
+    selectedObj.mesh.remove(selEdges);
+    selEdges.geometry.dispose();
+    selEdges.material.dispose();
+    selEdges = null;
+  }
+
+  selectedObj = null;
+  const labelEl = document.getElementById('sel-label');
+  labelEl.textContent = 'No object selected';
+  labelEl.classList.remove('active');
+
+  document.getElementById('btn-remove').disabled = true;
+  updateRepPanel(null);
+  updateStats();
+}
+
+function handleCanvasClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  if (e.clientX < rect.left || e.clientX > rect.right ||
+      e.clientY < rect.top  || e.clientY > rect.bottom) return;
+
+  _mouse.x = ((e.clientX - rect.left) / rect.width)  *  2 - 1;
+  _mouse.y = ((e.clientY - rect.top)  / rect.height) * -2 + 1;
+
+  raycaster.setFromCamera(_mouse, camera);
+
+  const meshes = userObjects.map(o => o.mesh);
+  const hits   = raycaster.intersectObjects(meshes, false);
+
+  if (hits.length > 0) {
+    const hitMesh = hits[0].object;
+    const obj = userObjects.find(o => o.mesh === hitMesh);
+    if (obj) selectObject(obj);
+  } else {
+    deselectObject();
+  }
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ORBIT CONTROLS (manual — no import needed)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const orbitTarget = new THREE.Vector3(0, 0, 0);
+
+const sph = { theta: 0.6, phi: 1.05, r: 6.0 };
+
+function applyOrbit() {
+  camera.position.set(
+    orbitTarget.x + sph.r * Math.sin(sph.phi) * Math.sin(sph.theta),
+    orbitTarget.y + sph.r * Math.cos(sph.phi),
+    orbitTarget.z + sph.r * Math.sin(sph.phi) * Math.cos(sph.theta),
+  );
+  camera.lookAt(orbitTarget);
+}
+
+let dragging    = false;  // orbit drag active
+let prevMouse   = { x: 0, y: 0 };
+let mouseDownPos = { x: 0, y: 0 };
+let didDrag     = false;
+
+const canvas = renderer.domElement;
+
+// ── Object drag state ─────────────────────────────────────────────────────────
+let dragObj      = null;    // userObject being dragged
+let isDraggingObj = false;
+let dragStarted  = false;   // first actual movement occurred
+const _dragPlane  = new THREE.Plane();
+const _dragOffset = new THREE.Vector3();
+const _dragHit    = new THREE.Vector3();
+
+/** Test if moving `obj` to `newPos` would overlap any other object. */
+function checkCollision(obj, newPos) {
+  const delta  = new THREE.Vector3().subVectors(newPos, obj.mesh.position);
+  const myBox  = new THREE.Box3().setFromObject(obj.mesh).translate(delta);
+  for (const other of userObjects) {
+    if (other === obj) continue;
+    if (myBox.intersectsBox(new THREE.Box3().setFromObject(other.mesh))) return true;
+  }
+  return false;
+}
+
+function startObjectDrag(obj, clientX, clientY) {
+  dragObj       = obj;
+  isDraggingObj = true;
+  dragStarted   = false;
+  // Horizontal plane at the object's current height
+  _dragPlane.set(new THREE.Vector3(0, 1, 0), -obj.mesh.position.y);
+  const rect = canvas.getBoundingClientRect();
+  _mouse.set(
+    ((clientX - rect.left) / rect.width)  *  2 - 1,
+    ((clientY - rect.top)  / rect.height) * -2 + 1
+  );
+  raycaster.setFromCamera(_mouse, camera);
+  if (raycaster.ray.intersectPlane(_dragPlane, _dragHit)) {
+    _dragOffset.subVectors(obj.mesh.position, _dragHit);
+  }
+}
+
+function updateObjectDrag(clientX, clientY) {
+  if (!isDraggingObj || !dragObj) return;
+  if (!dragStarted) {
+    dragStarted = true;
+    clearRepMeshes(dragObj);
+    showMesh(dragObj, true);
+  }
+  const rect = canvas.getBoundingClientRect();
+  _mouse.set(
+    ((clientX - rect.left) / rect.width)  *  2 - 1,
+    ((clientY - rect.top)  / rect.height) * -2 + 1
+  );
+  raycaster.setFromCamera(_mouse, camera);
+  if (!raycaster.ray.intersectPlane(_dragPlane, _dragHit)) return;
+
+  const newPos = new THREE.Vector3(
+    _dragHit.x + _dragOffset.x,
+    dragObj.mesh.position.y,   // keep height fixed
+    _dragHit.z + _dragOffset.z
+  );
+  if (!checkCollision(dragObj, newPos)) {
+    dragObj.mesh.position.copy(newPos);
+  }
+}
+
+function endObjectDrag() {
+  if (!isDraggingObj) return;
+  if (dragStarted) buildRepForObj(dragObj);
+  isDraggingObj = false;
+  dragStarted   = false;
+  dragObj       = null;
+}
+
+// ── Mouse event handlers ──────────────────────────────────────────────────────
+
+canvas.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  mouseDownPos = { x: e.clientX, y: e.clientY };
+  didDrag = false;
+
+  // Check if pointer is over any object
+  const rect = canvas.getBoundingClientRect();
+  _mouse.set(
+    ((e.clientX - rect.left) / rect.width)  *  2 - 1,
+    ((e.clientY - rect.top)  / rect.height) * -2 + 1
+  );
+  raycaster.setFromCamera(_mouse, camera);
+  const hits = raycaster.intersectObjects(userObjects.map(o => o.mesh), false);
+  if (hits.length > 0) {
+    const obj = userObjects.find(o => o.mesh === hits[0].object);
+    if (obj) {
+      if (selectedObj !== obj) selectObject(obj);
+      startObjectDrag(obj, e.clientX, e.clientY);
+      canvas.style.cursor = 'grabbing';
+      return;
+    }
+  }
+
+  // No object hit → orbit
+  dragging  = true;
+  prevMouse = { x: e.clientX, y: e.clientY };
+  canvas.style.cursor = 'grabbing';
+});
+
+window.addEventListener('mouseup', e => {
+  if (e.button !== 0) return;
+  if (isDraggingObj) {
+    endObjectDrag();
+    canvas.style.cursor = 'grab';
+  } else {
+    if (!didDrag) handleCanvasClick(e);
+    dragging = false;
+    canvas.style.cursor = 'default';
+  }
+});
+
+window.addEventListener('mousemove', e => {
+  const moved = Math.abs(e.clientX - mouseDownPos.x) > 4 ||
+                Math.abs(e.clientY - mouseDownPos.y) > 4;
+  if (moved) didDrag = true;
+
+  if (isDraggingObj) {
+    if (didDrag) updateObjectDrag(e.clientX, e.clientY);
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  if (dragging) {
+    const dx = e.clientX - prevMouse.x;
+    const dy = e.clientY - prevMouse.y;
+    prevMouse = { x: e.clientX, y: e.clientY };
+    sph.theta -= dx * 0.008;
+    sph.phi    = Math.max(0.06, Math.min(Math.PI - 0.06, sph.phi + dy * 0.008));
+    applyOrbit();
+    canvas.style.cursor = 'grabbing';
+    return;
+  }
+
+  // Hover: show grab cursor when over an object
+  const rect = canvas.getBoundingClientRect();
+  if (userObjects.length > 0 &&
+      e.clientX >= rect.left && e.clientX <= rect.right &&
+      e.clientY >= rect.top  && e.clientY <= rect.bottom) {
+    _mouse.set(
+      ((e.clientX - rect.left) / rect.width)  *  2 - 1,
+      ((e.clientY - rect.top)  / rect.height) * -2 + 1
+    );
+    raycaster.setFromCamera(_mouse, camera);
+    const hits = raycaster.intersectObjects(userObjects.map(o => o.mesh), false);
+    canvas.style.cursor = hits.length > 0 ? 'grab' : 'default';
+  } else {
+    canvas.style.cursor = 'default';
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  sph.r = Math.max(1.2, Math.min(14, sph.r + e.deltaY * 0.004));
+  applyOrbit();
+  e.preventDefault();
+}, { passive: false });
+
+// Touch support
+let lastTouchDist = null;
+canvas.addEventListener('touchstart', e => {
+  if (e.touches.length === 1) {
+    dragging = true;
+    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  }
+});
+
+canvas.addEventListener('touchmove', e => {
+  if (e.touches.length === 1 && dragging) {
+    const dx = e.touches[0].clientX - prevMouse.x;
+    const dy = e.touches[0].clientY - prevMouse.y;
+    prevMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    sph.theta -= dx * 0.008;
+    sph.phi    = Math.max(0.06, Math.min(Math.PI - 0.06, sph.phi + dy * 0.008));
+    applyOrbit();
+  }
+  if (e.touches.length === 2) {
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    if (lastTouchDist !== null) {
+      sph.r = Math.max(1.2, Math.min(14, sph.r - (dist - lastTouchDist) * 0.01));
+      applyOrbit();
+    }
+    lastTouchDist = dist;
+  }
+  e.preventDefault();
+}, { passive: false });
+
+canvas.addEventListener('touchend', () => { dragging = false; lastTouchDist = null; });
+
+applyOrbit();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  RESIZE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window.addEventListener('resize', () => {
+  const w = viewport.clientWidth, h = viewport.clientHeight;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h);
+});
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  RENDER LOOP
+// ═══════════════════════════════════════════════════════════════════════════════
+
+(function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+})();
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  BOOT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+initAddPanel();
+updateStats();
+
+</script>
+</body>
+</html>
