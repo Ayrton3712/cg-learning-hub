@@ -1,0 +1,565 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CG Learning Hub - 3D Graphics Pipeline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ── Light theme (default) ── */
+  --bg: #eef1f8;
+  --panel: #ffffff;
+  --border: #cdd2e8;
+  --accent: #0070c0;
+  --accent2: #d6003a;
+  --accent3: #3d8b00;
+  --text: #1c2138;
+  --muted: #7a83a8;
+  --panel-w: 260px;
+  --header-h: 52px;
+
+  /* Derived / theme-specific tints */
+  --scene-bg-css: #e0e5f2;
+  --label-bg: rgba(255,255,255,0.85);
+  --row-hover: rgba(0,60,160,0.04);
+  --badge-shadow: rgba(0,112,192,0.4);
+  --badge-text: #ffffff;
+  --btn-active-text: #ffffff;
+  --accent-glow: rgba(0,112,192,0.25);
+  --accent-tint-lo: rgba(0,112,192,0.04);
+  --accent-tint-mid: rgba(0,112,192,0.07);
+  --accent-tint-border: rgba(0,112,192,0.25);
+  --matrix-bg: rgba(0,40,120,0.04);
+  --matrix-flash: rgba(61,139,0,0.15);
+  --accent-scanline: rgba(0,112,192,0.75);
+}
+
+[data-theme="dark"] {
+  --bg: #0a0a0f;
+  --panel: #0f0f1a;
+  --border: #1e1e3a;
+  --accent: #00e5ff;
+  --accent2: #ff3d6b;
+  --accent3: #aaff00;
+  --text: #c8d0e8;
+  --muted: #4a5068;
+
+  --scene-bg-css: #000000;
+  --label-bg: rgba(0,0,0,0.55);
+  --row-hover: rgba(255,255,255,0.02);
+  --badge-shadow: rgba(0,229,255,0.55);
+  --badge-text: #000000;
+  --btn-active-text: #000000;
+  --accent-glow: rgba(0,229,255,0.3);
+  --accent-tint-lo: rgba(0,229,255,0.03);
+  --accent-tint-mid: rgba(0,229,255,0.06);
+  --accent-tint-border: rgba(0,229,255,0.2);
+  --matrix-bg: rgba(255,255,255,0.04);
+  --matrix-flash: rgba(170,255,0,0.2);
+  --accent-scanline: rgba(0,229,255,0.7);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Syne', sans-serif;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* HEADER */
+#header {
+  height: var(--header-h);
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 10px;
+  flex-shrink: 0;
+  z-index: 10;
+}
+#header h1 { font-size: 14px; font-weight: 600; color: var(--muted); }
+#header .sep { color: var(--border); }
+#header h2 { font-size: 14px; font-weight: 700; color: var(--accent); letter-spacing: 0.05em; }
+
+/* MAIN LAYOUT */
+#main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* VIEWPORT */
+#viewport-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: var(--scene-bg-css);
+}
+
+#canvas-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+#main-canvas, #god-eye-canvas {
+  flex-shrink: 0;
+  display: block;
+}
+
+#main-canvas {
+  image-rendering: pixelated;
+}
+
+#god-eye-canvas {
+  display: none !important;
+  image-rendering: pixelated;
+}
+
+#god-eye-canvas.split-active {
+  display: block !important;
+}
+
+/* Zoom inset */
+#zoom-inset {
+  display: none;
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  width: 200px;
+  height: 150px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  cursor: move;
+  z-index: 20;
+  background: var(--scene-bg-css);
+}
+#zoom-inset canvas { width: 100%; height: 100%; display: block; }
+#zoom-label {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+}
+
+/* View labels */
+.view-label {
+  position: absolute;
+  top: 8px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  pointer-events: none;
+  z-index: 5;
+  background: var(--label-bg);
+  padding: 2px 6px;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+#label-god { left: 8px; display: none; }
+#label-cam { display: none; }
+
+/* RIGHT PANEL */
+#right-panel {
+  width: var(--panel-w);
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  box-shadow: -2px 0 8px rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+#panel-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+#panel-scroll::-webkit-scrollbar { width: 4px; }
+#panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* STAGE LIST */
+#stage-list { padding: 12px 0; }
+
+.stage-row {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.15s;
+}
+.stage-row:hover { background: var(--row-hover); }
+
+.stage-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.stage-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.stage-row.active-stage .stage-badge {
+  background: var(--accent);
+  color: var(--badge-text);
+  box-shadow: 0 0 8px var(--badge-shadow);
+}
+
+.stage-name {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: color 0.2s;
+}
+.stage-row.disabled .stage-name { color: var(--muted); font-style: italic; }
+
+/* TOGGLE PILL */
+.toggle-pill {
+  width: 36px;
+  height: 18px;
+  border-radius: 9px;
+  background: var(--muted);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+  border: none;
+  outline: none;
+}
+.toggle-pill.on { background: var(--accent); animation: pulse-glow 2s ease-in-out infinite; }
+.toggle-pill.disabled-toggle { background: var(--border); cursor: not-allowed; opacity: 0.5; }
+.toggle-pill::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+}
+.toggle-pill.on::after { left: 20px; }
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 4px var(--accent); }
+  50% { box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent-glow); }
+}
+
+.dep-note {
+  font-size: 10px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 4px;
+  padding-left: 28px;
+}
+
+/* DETAIL PANEL */
+.detail-panel {
+  display: none;
+  border-left: 2px solid var(--accent);
+  margin: 6px 8px 6px 14px;
+  padding: 10px;
+  background: var(--accent-tint-lo);
+  border-radius: 0 4px 4px 0;
+  font-size: 11px;
+}
+.detail-panel.open { display: block; }
+
+.detail-section { margin-bottom: 10px; }
+.detail-section:last-child { margin-bottom: 0; }
+
+.detail-label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.notice-box {
+  background: var(--accent-tint-mid);
+  border: 1px solid var(--accent-tint-border);
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 10px;
+  color: var(--accent);
+}
+
+/* BUTTONS */
+.btn-row { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px; }
+.btn {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.active { background: var(--accent); color: var(--btn-active-text); border-color: var(--accent); }
+.btn.warn { border-color: var(--accent2); color: var(--accent2); }
+
+/* SLIDERS */
+.slider-row { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.slider-row label {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 28px;
+  flex-shrink: 0;
+}
+.slider-row input[type=range] {
+  flex: 1;
+  height: 2px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.slider-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 10px;
+  color: var(--accent3);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* TOGGLE ROW (for detail toggles) */
+.detail-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.detail-toggle-row span { font-size: 11px; }
+.mini-toggle {
+  width: 28px;
+  height: 14px;
+  border-radius: 7px;
+  background: var(--muted);
+  position: relative;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+.mini-toggle.on { background: var(--accent); }
+.mini-toggle::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  top: 2px;
+  left: 2px;
+  transition: left 0.15s;
+}
+.mini-toggle.on::after { left: 16px; }
+
+/* MATRIX DISPLAY */
+#matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  margin-bottom: 6px;
+}
+.matrix-cell {
+  background: var(--matrix-bg);
+  border: 1px solid var(--border);
+  padding: 2px 3px;
+  text-align: center;
+  color: var(--text);
+  border-radius: 2px;
+  transition: background 0.3s, color 0.3s;
+}
+.matrix-cell.flash {
+  background: var(--matrix-flash);
+  color: var(--accent3);
+}
+
+/* VERTEX LIST */
+#vertex-list {
+  max-height: 80px;
+  overflow-y: auto;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* STATS */
+#stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+.stat-cell {
+  background: var(--panel);
+  padding: 8px 10px;
+  text-align: center;
+}
+.stat-val {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 16px;
+  color: var(--accent);
+  display: block;
+}
+.stat-lbl {
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* VIEWPORT OVERLAY */
+#viewport-rect-overlay {
+  display: none;
+  position: absolute;
+  border: 2px dashed var(--accent3);
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* SCANLINE in zoom */
+#scanline-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent-scanline);
+  pointer-events: none;
+  display: none;
+}
+
+/* Represented object warning */
+.warn-text { color: var(--accent2); font-size: 10px; font-style: italic; }
+
+/* Object selected display */
+#s1-selected { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+#s2-selected { font-family: 'Share Tech Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 6px; }
+
+/* Repr buttons */
+.repr-btn { font-size: 9px; padding: 3px 6px; }
+
+/* stage 4 clipped counter */
+#clipped-count { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent2); }
+
+/* Effective res label */
+#eff-res { font-family: 'Share Tech Mono', monospace; font-size: 10px; color: var(--accent3); }
+
+/* THEME SWITCHER */
+.theme-switcher {
+  margin-left: auto;
+  display: flex;
+  background: var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  gap: 2px;
+}
+.theme-btn {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  padding: 4px 12px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+  letter-spacing: 0.04em;
+}
+.theme-btn:hover { color: var(--text); }
+.theme-btn.active {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+</style>
+</head>
+<body>
+
+<div id="header">
+  <h1>CG Learning Hub</h1>
+  <span class="sep">›</span>
+  <h2>3D Graphics Pipeline</h2>
+  <div class="theme-switcher" id="theme-switcher">
+    <button class="theme-btn active" id="btn-light">Light</button>
+    <button class="theme-btn" id="btn-dark">Dark</button>
+  </div>
+</div>
+
+<div id="main">
+  <div id="viewport-wrap">
+    <div id="canvas-container">
+      <canvas id="god-eye-canvas"></canvas>
+      <canvas id="main-canvas"></canvas>
+    </div>
+    <div class="view-label" id="label-god">GOD'S EYE VIEW</div>
+    <div class="view-label" id="label-cam">CAMERA VIEW</div>
+    <div id="viewport-rect-overlay"></div>
+    <div id="zoom-inset">
+      <div id="zoom-label">PIXEL ZOOM</div>
+      <canvas id="zoom-canvas" width="200" height="150"></canvas>
+      <div id="scanline-bar"></div>
+    </div>
+  </div>
+
+  <div id="right-panel">
+    <div id="panel-scroll">
+      <div id="stage-list">
+        <!-- Stage rows injected by JS -->
+      </div>
+    </div>
+    <div id="stats-grid">
+      <div class="stat-cell"><span class="stat-val" id="stat-objects">0</span><span class="stat-lbl">Objects</span></div>
+      <div class="stat-cell"><span class="stat-val" id="stat-verts">0</span><span class="stat-lbl">Vertices</span></div>
+      <div class="stat-cell"><span class="stat-val" id="stat-tris">0</span><span class="stat-lbl">Triangles</span></div>
+      <div class="stat-cell"><span class="stat-val" id="stat-stages">0</span><span class="stat-lbl">Active Stages</span></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script type="module" src="./pipeline_3d_main.js"></script>
+</body>
+</html>
