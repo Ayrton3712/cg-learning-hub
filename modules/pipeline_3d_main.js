@@ -102,6 +102,28 @@ function updateCameraFromOrbit(orb, cam) {
 
 updateCameraFromOrbit(S.orbit, S.camera);
 
+// ─── KEYBOARD STATE (for camera movement) ────────────────────────────────────
+const keyboardState = {
+  w: false, a: false, s: false, d: false,
+  moveSpeed: 0.1, // units per frame
+};
+
+document.addEventListener('keydown', e => {
+  const key = e.key.toLowerCase();
+  if (key === 'w') keyboardState.w = true;
+  if (key === 'a') keyboardState.a = true;
+  if (key === 's') keyboardState.s = true;
+  if (key === 'd') keyboardState.d = true;
+});
+
+document.addEventListener('keyup', e => {
+  const key = e.key.toLowerCase();
+  if (key === 'w') keyboardState.w = false;
+  if (key === 'a') keyboardState.a = false;
+  if (key === 's') keyboardState.s = false;
+  if (key === 'd') keyboardState.d = false;
+});
+
 // ─── CANVAS EVENTS ───────────────────────────────────────────────────────────
 const mainCanvas = document.getElementById('main-canvas');
 const godCanvas  = document.getElementById('god-eye-canvas');
@@ -417,6 +439,33 @@ document.getElementById('btn-dark').addEventListener('click', () => setTheme('da
 // ─── RENDER LOOP ─────────────────────────────────────────────────────────────
 function render() {
   requestAnimationFrame(render);
+
+  // Apply WASD camera movement
+  if (keyboardState.w || keyboardState.a || keyboardState.s || keyboardState.d) {
+    // Calculate camera forward direction
+    const forward = new THREE.Vector3();
+    S.camera.getWorldDirection(forward);
+    
+    // Calculate right direction (perpendicular to forward)
+    const right = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    right.crossVectors(forward, up).normalize();
+    
+    // Recalculate up to ensure orthogonality
+    const trueUp = new THREE.Vector3();
+    trueUp.crossVectors(right, forward).normalize();
+    
+    // Apply movement
+    const movement = new THREE.Vector3();
+    if (keyboardState.w) movement.addScaledVector(forward, keyboardState.moveSpeed);
+    if (keyboardState.s) movement.addScaledVector(forward, -keyboardState.moveSpeed);
+    if (keyboardState.d) movement.addScaledVector(right, keyboardState.moveSpeed);
+    if (keyboardState.a) movement.addScaledVector(right, -keyboardState.moveSpeed);
+    
+    // Move camera and orbit target together
+    S.camera.position.add(movement);
+    S.orbit.target.add(movement);
+  }
 
   if (S.cameraHelper && S.stages[3]) S.cameraHelper.update();
 
