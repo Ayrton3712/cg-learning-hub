@@ -23,18 +23,19 @@ export function disposeGroup(g) {
 }
 
 // ─── BREP PROP BUILDERS ───────────────────────────────────────────────────────
-function buildTreeMeshes(group, def, useLit) {
-  function mat(color, roughness = 0.85) {
+function buildTreeMeshes(group, def, useLit, useGray) {
+  function mat(color, grayColor, roughness = 0.85) {
+    const c = useGray ? grayColor : color;
     return useLit
-      ? new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 })
-      : new THREE.MeshBasicMaterial({ color });
+      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0 })
+      : new THREE.MeshBasicMaterial({ color: c });
   }
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.7, 8), mat(0x4a2e00, 0.95));
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.7, 8), mat(0x4a2e00, 0x707070, 0.95));
   trunk.position.y = 0.35;
   trunk.castShadow = true;
   group.add(trunk);
 
-  const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 8), mat(0x2d5a1b, 0.8));
+  const foliage = new THREE.Mesh(new THREE.ConeGeometry(0.55, 1.5, 8), mat(0x2d5a1b, 0x707070, 0.8));
   foliage.position.y = 0.7 + 0.75;
   foliage.castShadow = true;
   group.add(foliage);
@@ -42,7 +43,7 @@ function buildTreeMeshes(group, def, useLit) {
   def.mesh = trunk;
 }
 
-function buildRockMesh(group, def, useLit) {
+function buildRockMesh(group, def, useLit, useGray) {
   const geo = new THREE.IcosahedronGeometry(0.52, 1);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
@@ -54,28 +55,30 @@ function buildRockMesh(group, def, useLit) {
   }
   geo.computeVertexNormals();
 
+  const rockColor = useGray ? 0x909090 : 0x7a7065;
   const mesh = new THREE.Mesh(geo, useLit
-    ? new THREE.MeshStandardMaterial({ color: 0x7a7065, roughness: 0.92, metalness: 0.05 })
-    : new THREE.MeshBasicMaterial({ color: 0x7a7065 }));
+    ? new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, metalness: 0.05 })
+    : new THREE.MeshBasicMaterial({ color: rockColor }));
   mesh.position.y = 0.3;
   mesh.castShadow = true;
   def.mesh = mesh;
   group.add(mesh);
 }
 
-function buildCabinMeshes(group, def, useLit) {
-  function mat(color, roughness = 0.9) {
+function buildCabinMeshes(group, def, useLit, useGray) {
+  function mat(color, grayColor, roughness = 0.9) {
+    const c = useGray ? grayColor : color;
     return useLit
-      ? new THREE.MeshStandardMaterial({ color, roughness, metalness: 0 })
-      : new THREE.MeshBasicMaterial({ color });
+      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0 })
+      : new THREE.MeshBasicMaterial({ color: c });
   }
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.2), mat(0x8b5e3c));
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.2), mat(0x8b5e3c, 0x808080));
   body.position.y = 0.45;
   body.castShadow = true;
   body.receiveShadow = true;
   group.add(body);
 
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.0, 0.6, 4), mat(0x5c2a1a, 0.95));
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.0, 0.6, 4), mat(0x5c2a1a, 0x767676, 0.95));
   roof.rotation.y = Math.PI / 4;
   roof.position.y = 0.9 + 0.3;
   roof.castShadow = true;
@@ -97,20 +100,21 @@ export function buildRepr(def) {
   group.rotation.copy(S.stages[1] ? def.worldRot : new THREE.Euler(0, 0, 0));
   group.scale.copy(S.stages[1] ? def.worldScale : new THREE.Vector3(1, 1, 1));
 
-  const useLit = S.stages[2];
-  const { color } = def;
+  const useLit        = S.stages[2];
+  const useGray       = !S.stages[2];
+  const effectiveColor = useGray ? def.grayColor : def.color;
 
   function makeStdMat() {
     return useLit
-      ? new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.1 })
-      : new THREE.MeshBasicMaterial({ color });
+      ? new THREE.MeshStandardMaterial({ color: effectiveColor, roughness: 0.6, metalness: 0.1 })
+      : new THREE.MeshBasicMaterial({ color: effectiveColor });
   }
 
   switch (def.repr) {
     case 'brep': {
-      if (def.geoType === 'tree')       buildTreeMeshes(group, def, useLit);
-      else if (def.geoType === 'rock')  buildRockMesh(group, def, useLit);
-      else if (def.geoType === 'cabin') buildCabinMeshes(group, def, useLit);
+      if (def.geoType === 'tree')       buildTreeMeshes(group, def, useLit, useGray);
+      else if (def.geoType === 'rock')  buildRockMesh(group, def, useLit, useGray);
+      else if (def.geoType === 'cabin') buildCabinMeshes(group, def, useLit, useGray);
 
       if (def.wireframeOn) {
         const meshes = [];
@@ -134,7 +138,7 @@ export function buildRepr(def) {
       }
       const ptGeo = new THREE.BufferGeometry();
       ptGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      group.add(new THREE.Points(ptGeo, new THREE.PointsMaterial({ color, size: def.pointSize, sizeAttenuation: true })));
+      group.add(new THREE.Points(ptGeo, new THREE.PointsMaterial({ color: effectiveColor, size: def.pointSize, sizeAttenuation: true })));
       def.mesh = null;
       break;
     }
@@ -208,7 +212,7 @@ export function clearSelection() {
 export function buildDetail0() {
   document.getElementById('detail-0').innerHTML = `
     <div class="detail-section">
-      <div class="notice-box">Flat shading — lighting is added in Stage 3.</div>
+      <div class="notice-box">Flat shading, grayscale — lighting and color are introduced in Stage 3.</div>
     </div>
     <div class="detail-section">
       <div class="detail-label">Selected Object</div>
