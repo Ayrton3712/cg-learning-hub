@@ -129,16 +129,36 @@ export function buildRepr(def) {
       break;
     }
     case 'points': {
-      const geo = makeBaseGeo(def);
-      const src = geo.attributes.position;
-      const positions = [];
-      for (let i = 0; i < Math.min(def.pointDensity, src.count); i++) {
-        const idx = Math.floor(Math.random() * src.count);
-        positions.push(src.getX(idx), src.getY(idx), src.getZ(idx));
+      // Build into a temp group using the same composite builders as BRep so
+      // multi-part objects (trunk+foliage, body+roof) are fully sampled.
+      const tmpGroup = new THREE.Group();
+      if (def.geoType === 'tree')       buildTreeMeshes(tmpGroup, def, false, useGray);
+      else if (def.geoType === 'rock')  buildRockMesh(tmpGroup, def, false, useGray);
+      else if (def.geoType === 'cabin') buildCabinMeshes(tmpGroup, def, false, useGray);
+
+      const allPositions = [];
+      tmpGroup.traverse(child => {
+        if (!child.isMesh) return;
+        child.updateMatrix();
+        const pos = child.geometry.attributes.position;
+        const tmp = new THREE.Vector3();
+        for (let i = 0; i < pos.count; i++) {
+          tmp.fromBufferAttribute(pos, i).applyMatrix4(child.matrix);
+          allPositions.push(tmp.x, tmp.y, tmp.z);
+        }
+      });
+
+      const vertCount = allPositions.length / 3;
+      const sampled = [];
+      for (let i = 0; i < Math.min(def.pointDensity, vertCount); i++) {
+        const idx = Math.floor(Math.random() * vertCount);
+        sampled.push(allPositions[idx * 3], allPositions[idx * 3 + 1], allPositions[idx * 3 + 2]);
       }
+
       const ptGeo = new THREE.BufferGeometry();
-      ptGeo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      group.add(new THREE.Points(ptGeo, new THREE.PointsMaterial({ color: effectiveColor, size: def.pointSize, sizeAttenuation: true })));
+      ptGeo.setAttribute('position', new THREE.Float32BufferAttribute(sampled, 3));
+      group.add(new THREE.Points(ptGeo,
+        new THREE.PointsMaterial({ color: effectiveColor, size: def.pointSize, sizeAttenuation: true })));
       def.mesh = null;
       break;
     }
