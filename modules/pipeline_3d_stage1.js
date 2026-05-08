@@ -209,9 +209,26 @@ export function selectObject(def) {
   if (!def) return;
   S.selectedObj = def;
   if (def.reprGroup) {
+    const toOutline = [];
     def.reprGroup.traverse(obj => {
-      if (obj.isMesh && obj.material?.emissive)
+      if (!obj.isMesh) return;
+      if (obj.material?.emissive) {
         obj.material.emissive.setHex(getEmissiveColor());
+      } else {
+        toOutline.push(obj);
+      }
+    });
+    // Stages 1-2 use MeshBasicMaterial (no emissive), so add an edge outline instead.
+    toOutline.forEach(mesh => {
+      mesh.updateMatrix();
+      const outline = new THREE.LineSegments(
+        new THREE.EdgesGeometry(mesh.geometry),
+        new THREE.LineBasicMaterial({ color: 0x4da6ff })
+      );
+      outline.matrix.copy(mesh.matrix);
+      outline.matrixAutoUpdate = false;
+      outline.userData.isSelectionHighlight = true;
+      def.reprGroup.add(outline);
     });
   }
   S.updateDetailPanels?.();
@@ -219,10 +236,14 @@ export function selectObject(def) {
 
 export function clearSelection() {
   if (S.selectedObj?.reprGroup) {
+    const toRemove = [];
     S.selectedObj.reprGroup.traverse(obj => {
       if (obj.isMesh && obj.material?.emissive)
         obj.material.emissive.set(0x000000);
+      if (obj.userData.isSelectionHighlight)
+        toRemove.push(obj);
     });
+    toRemove.forEach(obj => S.selectedObj.reprGroup.remove(obj));
   }
   S.selectedObj = null;
   S.updateDetailPanels?.();
