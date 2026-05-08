@@ -129,6 +129,7 @@ const mainCanvas = document.getElementById('main-canvas');
 const godCanvas  = document.getElementById('god-eye-canvas');
 const raycaster  = new THREE.Raycaster();
 const mouse      = new THREE.Vector2();
+let mouseDownX = 0, mouseDownY = 0;
 
 mainCanvas.addEventListener('mousedown', e => {
   const rect = mainCanvas.getBoundingClientRect();
@@ -137,6 +138,8 @@ mainCanvas.addEventListener('mousedown', e => {
   S.orbit.button   = e.button;
   S.orbit.lastX    = e.clientX;
   S.orbit.lastY    = e.clientY;
+  mouseDownX = e.clientX;
+  mouseDownY = e.clientY;
 });
 
 document.addEventListener('mousemove', e => {
@@ -176,7 +179,7 @@ mainCanvas.addEventListener('wheel', e => {
 }, { passive: false });
 
 mainCanvas.addEventListener('click', e => {
-  if (Math.abs(e.movementX) > 3 || Math.abs(e.movementY) > 3) return;
+  if (Math.abs(e.clientX - mouseDownX) > 5 || Math.abs(e.clientY - mouseDownY) > 5) return;
   const rect = mainCanvas.getBoundingClientRect();
   let nx, ny;
   if (S.splitActive) {
