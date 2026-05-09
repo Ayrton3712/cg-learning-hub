@@ -128,6 +128,7 @@ document.addEventListener('keyup', e => {
 const mainCanvas = document.getElementById('main-canvas');
 const godCanvas  = document.getElementById('god-eye-canvas');
 const raycaster  = new THREE.Raycaster();
+raycaster.params.Points = { threshold: 0.15 };
 const mouse      = new THREE.Vector2();
 let mouseDownX = 0, mouseDownY = 0;
 
@@ -197,7 +198,7 @@ mainCanvas.addEventListener('click', e => {
   const pickable = [];
   S.objectDefs.forEach(def => {
     if (def.reprGroup?.visible)
-      def.reprGroup.traverse(o => { if (o.isMesh) pickable.push(o); });
+      def.reprGroup.traverse(o => { if (o.isMesh || o.isPoints) pickable.push(o); });
   });
 
   const hits = raycaster.intersectObjects(pickable);

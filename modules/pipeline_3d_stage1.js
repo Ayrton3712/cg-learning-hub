@@ -257,7 +257,10 @@ export function buildDetail0() {
     </div>
     <div class="detail-section">
       <div class="detail-label">Selected Object</div>
-      <div id="s1-selected">None</div>
+      <select id="s1-obj-dropdown" class="obj-select">
+        <option value="">— None —</option>
+        ${S.objectDefs.map(d => `<option value="${d.name}">${d.name}</option>`).join('')}
+      </select>
     </div>
     <div class="detail-section">
       <div class="detail-label">Representation</div>
@@ -288,6 +291,11 @@ export function buildDetail0() {
       <div class="slider-row"><label>Ang</label><input type="range" id="sw-angle" min="0" max="360" step="1" value="360"><span class="slider-val" id="sw-angle-val">360°</span></div>
     </div>
   `;
+
+  document.getElementById('s1-obj-dropdown').addEventListener('change', function() {
+    const def = S.objectDefs.find(d => d.name === this.value);
+    if (def) selectObject(def); else clearSelection();
+  });
 
   document.querySelectorAll('#detail-0 [data-repr]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -353,10 +361,10 @@ export function buildDetail0() {
 }
 
 export function updateDetail0() {
-  const sel = document.getElementById('s1-selected');
-  if (!sel) return;
-  if (!S.selectedObj) { sel.textContent = 'None'; return; }
-  sel.textContent = S.selectedObj.name;
+  const dropdown = document.getElementById('s1-obj-dropdown');
+  if (!dropdown) return;
+  dropdown.value = S.selectedObj ? S.selectedObj.name : '';
+  if (!S.selectedObj) return;
 
   document.querySelectorAll('[data-repr]').forEach(b => {
     b.classList.toggle('active', b.dataset.repr === S.selectedObj.repr);
