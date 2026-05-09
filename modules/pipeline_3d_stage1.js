@@ -116,14 +116,50 @@ export function buildRepr(def) {
       else if (def.geoType === 'rock')  buildRockMesh(group, def, useLit, useGray);
       else if (def.geoType === 'cabin') buildCabinMeshes(group, def, useLit, useGray);
 
+      const brepMeshes = [];
+      group.traverse(o => { if (o.isMesh) brepMeshes.push(o); });
+
       if (def.wireframeOn) {
-        const meshes = [];
-        group.traverse(o => { if (o.isMesh) meshes.push(o); });
-        meshes.forEach(m => {
-          group.add(new THREE.LineSegments(
+        brepMeshes.forEach(m => {
+          // Push mesh faces back slightly so wireframe lines sit on top.
+          m.material.polygonOffset = true;
+          m.material.polygonOffsetFactor = 1;
+          m.material.polygonOffsetUnits = 1;
+          m.updateMatrix();
+          const wire = new THREE.LineSegments(
             new THREE.EdgesGeometry(m.geometry),
-            new THREE.LineBasicMaterial({ color: getWireColor(), linewidth: 1 })
-          ));
+            new THREE.LineBasicMaterial({ color: getWireColor() })
+          );
+          wire.matrix.copy(m.matrix);
+          wire.matrixAutoUpdate = false;
+          group.add(wire);
+        });
+      }
+
+      if (def.normalsOn) {
+        brepMeshes.forEach(m => {
+          m.updateMatrix();
+          const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
+          if (!geo.attributes.normal) geo.computeVertexNormals();
+          const pos = geo.attributes.position;
+          const nrm = geo.attributes.normal;
+          const arrowLen = 0.18;
+          const linePositions = [];
+          for (let i = 0; i < pos.count; i += 3) {
+            const cx = (pos.getX(i) + pos.getX(i+1) + pos.getX(i+2)) / 3;
+            const cy = (pos.getY(i) + pos.getY(i+1) + pos.getY(i+2)) / 3;
+            const cz = (pos.getZ(i) + pos.getZ(i+1) + pos.getZ(i+2)) / 3;
+            const nx = (nrm.getX(i) + nrm.getX(i+1) + nrm.getX(i+2)) / 3;
+            const ny = (nrm.getY(i) + nrm.getY(i+1) + nrm.getY(i+2)) / 3;
+            const nz = (nrm.getZ(i) + nrm.getZ(i+1) + nrm.getZ(i+2)) / 3;
+            linePositions.push(cx, cy, cz, cx + nx * arrowLen, cy + ny * arrowLen, cz + nz * arrowLen);
+          }
+          const normGeo = new THREE.BufferGeometry();
+          normGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
+          const normLines = new THREE.LineSegments(normGeo, new THREE.LineBasicMaterial({ color: 0x00cc66 }));
+          normLines.matrix.copy(m.matrix);
+          normLines.matrixAutoUpdate = false;
+          group.add(normLines);
         });
       }
       break;
