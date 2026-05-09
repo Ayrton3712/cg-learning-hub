@@ -199,19 +199,64 @@ export function buildRepr(def) {
       break;
     }
     case 'voxel': {
-      const geo = makeBaseGeo(def);
-      geo.computeBoundingBox();
-      const { min, max } = geo.boundingBox;
-      const res = def.voxelRes;
-      const dx = (max.x - min.x) / res, dy = (max.y - min.y) / res, dz = (max.z - min.z) / res;
-      for (let xi = 0; xi < res; xi++)
-        for (let yi = 0; yi < res; yi++)
-          for (let zi = 0; zi < res; zi++) {
-            const vc = new THREE.Mesh(new THREE.BoxGeometry(dx * 0.9, dy * 0.9, dz * 0.9), makeStdMat());
-            vc.castShadow = true;
-            vc.position.set(min.x + (xi + 0.5) * dx, min.y + (yi + 0.5) * dy, min.z + (zi + 0.5) * dz);
-            group.add(vc);
+      // Build actual composite geometry so tree/cabin use all their parts.
+      const tmpGroup = new THREE.Group();
+      if (def.geoType === 'tree')       buildTreeMeshes(tmpGroup, def, false, useGray);
+      else if (def.geoType === 'rock')  buildRockMesh(tmpGroup, def, false, useGray);
+      else if (def.geoType === 'cabin') buildCabinMeshes(tmpGroup, def, false, useGray);
+
+      // Sample vertices + face centers from every mesh part in group-local space.
+      const samples = [];
+      const _v = new THREE.Vector3();
+      tmpGroup.traverse(child => {
+        if (!child.isMesh) return;
+        child.updateMatrix();
+        const geo = child.geometry.index ? child.geometry.toNonIndexed() : child.geometry;
+        const pos = geo.attributes.position;
+        for (let i = 0; i < pos.count; i += 3) {
+          for (let j = 0; j < 3; j++) {
+            _v.fromBufferAttribute(pos, i + j).applyMatrix4(child.matrix);
+            samples.push(_v.clone());
           }
+          _v.set(
+            (pos.getX(i) + pos.getX(i+1) + pos.getX(i+2)) / 3,
+            (pos.getY(i) + pos.getY(i+1) + pos.getY(i+2)) / 3,
+            (pos.getZ(i) + pos.getZ(i+1) + pos.getZ(i+2)) / 3
+          ).applyMatrix4(child.matrix);
+          samples.push(_v.clone());
+        }
+      });
+
+      const bbox = new THREE.Box3();
+      samples.forEach(p => bbox.expandByPoint(p));
+
+      const res = def.voxelRes;
+      const sz = bbox.getSize(new THREE.Vector3());
+      const dx = sz.x / res, dy = sz.y / res, dz = sz.z / res;
+      // Expand the acceptance radius slightly beyond the exact half-cell so
+      // surface triangles crossing a cell boundary still activate that cell.
+      const rx = dx * 0.55, ry = dy * 0.55, rz = dz * 0.55;
+
+      for (let xi = 0; xi < res; xi++) {
+        for (let yi = 0; yi < res; yi++) {
+          for (let zi = 0; zi < res; zi++) {
+            const cx = bbox.min.x + (xi + 0.5) * dx;
+            const cy = bbox.min.y + (yi + 0.5) * dy;
+            const cz = bbox.min.z + (zi + 0.5) * dz;
+            const occupied = samples.some(p =>
+              Math.abs(p.x - cx) <= rx &&
+              Math.abs(p.y - cy) <= ry &&
+              Math.abs(p.z - cz) <= rz
+            );
+            if (occupied) {
+              const vc = new THREE.Mesh(new THREE.BoxGeometry(dx * 0.9, dy * 0.9, dz * 0.9), makeStdMat());
+              vc.castShadow = true;
+              vc.position.set(cx, cy, cz);
+              group.add(vc);
+            }
+          }
+        }
+      }
       def.mesh = null;
       break;
     }
