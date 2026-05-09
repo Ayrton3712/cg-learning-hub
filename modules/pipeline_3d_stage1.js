@@ -261,19 +261,44 @@ export function buildRepr(def) {
       break;
     }
     case 'sweep': {
-      // Tree and rock are rotationally symmetric; cabin shows a warning before reaching here
-      const pts = [];
-      for (let i = 0; i <= 12; i++) {
-        const a = Math.PI * (i / 12);
-        pts.push(new THREE.Vector2(Math.sin(a) * 0.6, Math.cos(a) * 0.6));
+      // Cabin is blocked upstream. Tree and rock use per-object profiles.
+      const sweepAngle = THREE.MathUtils.degToRad(def.sweepAngle);
+      const profileOffset = 0.9; // x-offset for the 2-D profile guide line
+
+      function addSweep(pts, setAsMesh) {
+        const m = new THREE.Mesh(
+          new THREE.LatheGeometry(pts, 24, 0, sweepAngle),
+          makeStdMat()
+        );
+        m.castShadow = true;
+        if (setAsMesh) def.mesh = m;
+        group.add(m);
+        const lineGeo = new THREE.BufferGeometry().setFromPoints(
+          pts.map(p => new THREE.Vector3(p.x + profileOffset, p.y, 0))
+        );
+        group.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: getWireColor() })));
       }
-      const latheGeo = new THREE.LatheGeometry(pts, 24, 0, THREE.MathUtils.degToRad(def.sweepAngle));
-      const mesh = new THREE.Mesh(latheGeo, makeStdMat());
-      mesh.castShadow = true;
-      def.mesh = mesh;
-      group.add(mesh);
-      const lineGeo = new THREE.BufferGeometry().setFromPoints(pts.map(p => new THREE.Vector3(p.x + 1, p.y, 0)));
-      group.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: getWireColor() })));
+
+      if (def.geoType === 'tree') {
+        // Trunk: tapered cylinder — radiusBottom 0.14, radiusTop 0.08, height 0.7
+        addSweep([
+          new THREE.Vector2(0.14, 0),
+          new THREE.Vector2(0.08, 0.7),
+        ], true);
+        // Foliage: cone — base radius 0.55 at y=0.7, apex at y=2.2
+        addSweep([
+          new THREE.Vector2(0.55, 0.7),
+          new THREE.Vector2(0,    2.2),
+        ], false);
+      } else {
+        // Rock: semicircle profile, radius 0.52, centred at y=0.3
+        const pts = [];
+        for (let i = 0; i <= 16; i++) {
+          const a = Math.PI * (i / 16);
+          pts.push(new THREE.Vector2(Math.sin(a) * 0.52, 0.3 - Math.cos(a) * 0.52));
+        }
+        addSweep(pts, true);
+      }
       break;
     }
   }
