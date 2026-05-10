@@ -4,6 +4,15 @@
 
 import { S } from './pipeline_3d_state.js';
 
+/**
+ * Builds and populates the Stage 4 detail panel with viewing controls.
+ *
+ * This function creates an HTML interface for controlling the viewing transform pipeline
+ * stage, including toggles for viewing transform, clipping planes, hidden surface removal,
+ * and projection type. It also provides sliders for camera field of view and position
+ * adjustments. Event listeners are attached to synchronize the UI controls with the 3D
+ * scene state managed in {@link S}.
+ */
 export function buildDetail3() {
   document.getElementById('detail-3').innerHTML = `
     <div class="detail-section">
@@ -108,6 +117,17 @@ export function buildDetail3() {
   });
 }
 
+/**
+ * Activates or deactivates split-view mode to display both god-eye and camera perspectives.
+ *
+ * When enabled, the viewport is split to show two simultaneous views: the orthogonal
+ * god-eye camera and the perspective camera. The {@link S.cameraHelper} becomes visible
+ * to aid in understanding camera positioning. When disabled, only the main perspective
+ * view is shown.
+ *
+ * @param {boolean} on - If `true`, split-view mode is activated; if `false`, it is
+ *                       deactivated.
+ */
 export function applySplitView(on) {
   S.splitActive = on;
   const godCanvas = document.getElementById('god-eye-canvas');
@@ -118,6 +138,18 @@ export function applySplitView(on) {
   S.resizeAll?.();
 }
 
+/**
+ * Gets or creates an orthographic camera synchronized with the current viewport.
+ *
+ * This function returns an orthographic camera suitable for the god-eye perspective in
+ * split-view mode. If the camera does not yet exist, it is created. The camera is
+ * configured to match the current viewport dimensions and near/far clipping planes. In
+ * split-view mode, the viewport is halved. The camera position and rotation are kept in
+ * sync with the perspective {@link S.camera}.
+ *
+ * @returns {THREE.OrthographicCamera} The orthographic camera configured for the current
+ *                                     viewport and scene state.
+ */
 export function getOrthoCamera() {
   const wrap = document.getElementById('viewport-wrap');
   const W = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
