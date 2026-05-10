@@ -144,8 +144,10 @@ export function applySplitView(on) {
  * This function returns an orthographic camera suitable for the god-eye perspective in
  * split-view mode. If the camera does not yet exist, it is created. The camera is
  * configured to match the current viewport dimensions and near/far clipping planes. In
- * split-view mode, the viewport is halved. The camera position and rotation are kept in
- * sync with the perspective {@link S.camera}.
+ * split-view mode, the viewport is halved. The orthographic half-size is fixed at 5
+ * world units to frame the default demo scene; if scene scale changes, this value should
+ * be made configurable. The camera position and rotation are kept in sync with the
+ * perspective {@link S.camera}.
  *
  * @returns {THREE.OrthographicCamera} The orthographic camera configured for the current
  *                                     viewport and scene state.
@@ -155,11 +157,14 @@ export function getOrthoCamera() {
   const W = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
   const H = wrap.clientHeight;
   const aspect = W / Math.max(H, 1);
+  const ORTHO_HALF_SIZE = 5;
   if (!S.orthoCamera) {
-    S.orthoCamera = new THREE.OrthographicCamera(-5 * aspect, 5 * aspect, 5, -5, S.camera.near, S.camera.far);
+    S.orthoCamera = new THREE.OrthographicCamera(-ORTHO_HALF_SIZE * aspect, ORTHO_HALF_SIZE * aspect, ORTHO_HALF_SIZE, -ORTHO_HALF_SIZE, S.camera.near, S.camera.far);
   } else {
-    S.orthoCamera.left = -5 * aspect;
-    S.orthoCamera.right = 5 * aspect;
+    S.orthoCamera.left = -ORTHO_HALF_SIZE * aspect;
+    S.orthoCamera.right = ORTHO_HALF_SIZE * aspect;
+    S.orthoCamera.top = ORTHO_HALF_SIZE;
+    S.orthoCamera.bottom = -ORTHO_HALF_SIZE;
     S.orthoCamera.near = S.camera.near;
     S.orthoCamera.far = S.camera.far;
     S.orthoCamera.updateProjectionMatrix();
