@@ -6,8 +6,8 @@ import { initLandscape, applyTerrainMaterial, terrainHeight, updateSunPosition }
 import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection } from './pipeline_3d_stage1.js';
 import { buildDetail1, updateDetail1 } from './pipeline_3d_stage2.js';
 import { buildDetail2 } from './pipeline_3d_stage3.js';
-import { buildDetail3, applySplitView, getOrthoCamera, updateDetail3 } from './pipeline_3d_stage4.js';
-import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset } from './pipeline_3d_stage5.js';
+import { buildDetail3, applySplitView, getOrthoCamera } from './pipeline_3d_stage4.js';
+import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset, drawPixelGridOverlay, getStage5RenderPixelSize } from './pipeline_3d_stage5.js';
 
 // ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
 S.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('main-canvas'), antialias: true });
@@ -475,27 +475,28 @@ function render() {
   if (S.cameraHelper && S.stages[3]) S.cameraHelper.update();
 
   if (S.stages[4] && S.s5ScanlineOn) {
-    const bar = document.getElementById('scanline-bar');
-    S.scanlineY = (S.scanlineY + 0.5) % 150;
-    bar.style.top = S.scanlineY + 'px';
+    const zoomCanvas = document.getElementById('zoom-canvas');
+    S.scanlineY = (S.scanlineY + 0.75) % zoomCanvas.height;
   }
 
   if (S.stages[4]) {
     const wrap = document.getElementById('viewport-wrap');
     const W = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
     const H = wrap.clientHeight;
-    const effW = Math.max(1, Math.floor(W / S.pixelSize));
-    const effH = Math.max(1, Math.floor(H / S.pixelSize));
+    const renderPixelSize = getStage5RenderPixelSize();
+    const effW = Math.max(1, Math.floor(W / renderPixelSize));
+    const effH = Math.max(1, Math.floor(H / renderPixelSize));
     S.renderer.setSize(effW, effH, false);
     mainCanvas.style.width  = W + 'px';
     mainCanvas.style.height = H + 'px';
-    mainCanvas.style.imageRendering = 'pixelated';
+    mainCanvas.style.imageRendering = S.s5AAOn ? 'auto' : 'pixelated';
   }
 
   if (S.splitActive && S.stages[3]) {
     S.cameraHelper.visible = true;
     S.godRenderer.render(S.scene, S.godCamera);
   }
+  if (S.cameraHelper) S.cameraHelper.visible = false;
 
   if (S.s4ProjOn && S.stages[3]) {
     S.renderer.render(S.scene, getOrthoCamera());
@@ -503,7 +504,10 @@ function render() {
     S.renderer.render(S.scene, S.camera);
   }
 
-  if (S.stages[4]) drawZoomInset();
+  if (S.stages[4]) {
+    drawZoomInset();
+    drawPixelGridOverlay();
+  }
 
   updateStats();
 }

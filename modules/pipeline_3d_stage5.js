@@ -1,8 +1,14 @@
 // Stage 5 — Scan Conversion
-// Handles pixelation, AA, scanline animation, pixel grid, zoom inset,
+// Handles pixelation, AA, raster sweep, pixel grid, zoom inset,
 // and the Stage 5 detail panel.
 
 import { S } from './pipeline_3d_state.js';
+
+const MIN_VISIBLE_GRID_STEP = 8;
+
+export function getStage5RenderPixelSize() {
+  return S.s5AAOn ? Math.max(1, S.pixelSize / 2) : S.pixelSize;
+}
 
 export function buildDetail4() {
   document.getElementById('detail-4').innerHTML = `
@@ -14,7 +20,7 @@ export function buildDetail4() {
     <div class="detail-section">
       <div class="detail-label">Options</div>
       <div class="detail-toggle-row"><span>Anti-aliasing</span><button class="mini-toggle" id="s5-aa"></button></div>
-      <div class="detail-toggle-row"><span>Scanline Anim</span><button class="mini-toggle" id="s5-scan"></button></div>
+      <div class="detail-toggle-row"><span>Raster Sweep</span><button class="mini-toggle" id="s5-scan"></button></div>
       <div class="detail-toggle-row"><span>Pixel Grid</span><button class="mini-toggle" id="s5-grid"></button></div>
     </div>
   `;
@@ -28,12 +34,13 @@ export function buildDetail4() {
   document.getElementById('s5-aa').addEventListener('click', function() {
     S.s5AAOn = !S.s5AAOn;
     this.classList.toggle('on', S.s5AAOn);
+    updateEffRes();
   });
 
   document.getElementById('s5-scan').addEventListener('click', function() {
     S.s5ScanlineOn = !S.s5ScanlineOn;
     this.classList.toggle('on', S.s5ScanlineOn);
-    document.getElementById('scanline-bar').style.display = S.s5ScanlineOn ? 'block' : 'none';
+    if (S.s5ScanlineOn) S.scanlineY = 0;
   });
 
   document.getElementById('s5-grid').addEventListener('click', function() {
@@ -68,6 +75,7 @@ export function buildDetail4() {
 
 export function applyPixelation(on) {
   document.getElementById('zoom-inset').style.display = on ? 'block' : 'none';
+  document.getElementById('pixel-grid-overlay').style.display = on && S.s5GridOn ? 'block' : 'none';
   if (!on) {
     document.getElementById('main-canvas').style.imageRendering = '';
     S.resizeAll?.();
@@ -79,10 +87,98 @@ export function updateEffRes() {
   const wrap = document.getElementById('viewport-wrap');
   const w = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
   const h = wrap.clientHeight;
-  const ew = Math.floor(w / S.pixelSize);
-  const eh = Math.floor(h / S.pixelSize);
+  const renderPixelSize = getStage5RenderPixelSize();
+  const ew = Math.floor(w / renderPixelSize);
+  const eh = Math.floor(h / renderPixelSize);
   const el = document.getElementById('eff-res');
   if (el) el.textContent = `Effective: ${ew}×${eh}`;
+}
+
+function strokePixelGrid(ctx, w, h, cellW, cellH) {
+  const step = Math.max(1, Math.ceil(MIN_VISIBLE_GRID_STEP / Math.min(cellW, cellH)));
+  const drawLines = () => {
+    for (let x = 0; x <= w + 0.01; x += cellW * step) {
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+    }
+    for (let y = 0; y <= h + 0.01; y += cellH * step) {
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+    }
+  };
+
+  ctx.save();
+  ctx.beginPath();
+  drawLines();
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+
+  ctx.beginPath();
+  drawLines();
+  ctx.strokeStyle = 'rgba(255,255,255,0.55)';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawRasterSweep(ctx, w, h) {
+  const y = Math.floor(S.scanlineY % h);
+  const rowHeight = Math.max(2, Math.min(12, S.pixelSize));
+  const scanlineColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--accent-scanline')
+    .trim() || 'rgba(0,112,192,0.75)';
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(0, Math.min(h, y + rowHeight), w, Math.max(0, h - y - rowHeight));
+
+  ctx.fillStyle = scanlineColor;
+  ctx.globalAlpha = 0.18;
+  ctx.fillRect(0, y, w, rowHeight);
+
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = scanlineColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, y + 0.5);
+  ctx.lineTo(w, y + 0.5);
+  ctx.stroke();
+  ctx.restore();
+}
+
+export function drawPixelGridOverlay() {
+  const overlay = document.getElementById('pixel-grid-overlay');
+  const mainCanvas = document.getElementById('main-canvas');
+
+  if (!S.stages[4] || !S.s5GridOn) {
+    overlay.style.display = 'none';
+    return;
+  }
+
+  const cssW = mainCanvas.clientWidth;
+  const cssH = mainCanvas.clientHeight;
+  if (!cssW || !cssH) return;
+
+  const dpr = window.devicePixelRatio || 1;
+  const backingW = Math.max(1, Math.floor(cssW * dpr));
+  const backingH = Math.max(1, Math.floor(cssH * dpr));
+  const renderPixelSize = getStage5RenderPixelSize();
+  const effW = Math.max(1, Math.floor(cssW / renderPixelSize));
+  const effH = Math.max(1, Math.floor(cssH / renderPixelSize));
+
+  overlay.style.display = 'block';
+  overlay.style.left = S.splitActive ? cssW + 'px' : '0';
+  overlay.style.width = cssW + 'px';
+  overlay.style.height = cssH + 'px';
+
+  if (overlay.width !== backingW) overlay.width = backingW;
+  if (overlay.height !== backingH) overlay.height = backingH;
+
+  const ctx = overlay.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+  strokePixelGrid(ctx, cssW, cssH, cssW / effW, cssH / effH);
 }
 
 export function drawZoomInset() {
@@ -100,25 +196,16 @@ export function drawZoomInset() {
   const cropY = Math.floor((srcH - cropH) / 2);
 
   zoomCtx.clearRect(0, 0, w, h);
-  zoomCtx.imageSmoothingEnabled = false;
+  zoomCtx.imageSmoothingEnabled = S.s5AAOn;
+  zoomCtx.imageSmoothingQuality = S.s5AAOn ? 'high' : 'low';
   zoomCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
 
-  if (S.s5AAOn) {
-    zoomCtx.filter = 'blur(1px)';
-    zoomCtx.drawImage(zoomCanvas, 0, 0);
-    zoomCtx.filter = 'none';
-  }
+  if (S.s5ScanlineOn) drawRasterSweep(zoomCtx, w, h);
 
   if (S.s5GridOn) {
-    const cellW = w / (cropW / S.pixelSize);
-    const cellH = h / (cropH / S.pixelSize);
-    zoomCtx.strokeStyle = 'rgba(40,60,140,0.45)';
-    zoomCtx.lineWidth = 0.5;
-    for (let x = 0; x < w; x += cellW) {
-      zoomCtx.beginPath(); zoomCtx.moveTo(x, 0); zoomCtx.lineTo(x, h); zoomCtx.stroke();
-    }
-    for (let y = 0; y < h; y += cellH) {
-      zoomCtx.beginPath(); zoomCtx.moveTo(0, y); zoomCtx.lineTo(w, y); zoomCtx.stroke();
-    }
+    const dpr = window.devicePixelRatio || 1;
+    const logicalCropW = Math.max(1, cropW / dpr);
+    const logicalCropH = Math.max(1, cropH / dpr);
+    strokePixelGrid(zoomCtx, w, h, w / logicalCropW, h / logicalCropH);
   }
 }
