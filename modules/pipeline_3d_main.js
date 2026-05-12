@@ -6,7 +6,7 @@ import { initLandscape, applyTerrainMaterial, terrainHeight, updateSunPosition }
 import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection } from './pipeline_3d_stage1.js';
 import { buildDetail1, updateDetail1 } from './pipeline_3d_stage2.js';
 import { buildDetail2 } from './pipeline_3d_stage3.js';
-import { buildDetail3, applySplitView, getOrthoCamera } from './pipeline_3d_stage4.js';
+import { buildDetail3, applySplitView, getOrthoCamera, updateDetail3 } from './pipeline_3d_stage4.js';
 import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset } from './pipeline_3d_stage5.js';
 
 // ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
@@ -385,6 +385,7 @@ function updateDetailPanels() {
   }
   if (S.openDetail === 0) updateDetail0();
   if (S.openDetail === 1) updateDetail1();
+  if (S.openDetail === 3) updateDetail3();
 }
 S.updateDetailPanels = updateDetailPanels;
 
