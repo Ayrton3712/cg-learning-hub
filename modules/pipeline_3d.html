@@ -130,6 +130,15 @@ body {
   display: block !important;
 }
 
+#pixel-grid-overlay {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 4;
+}
+
 /* Zoom inset */
 #zoom-inset {
   display: none;
@@ -538,6 +547,7 @@ body {
       <canvas id="god-eye-canvas"></canvas>
       <canvas id="main-canvas"></canvas>
     </div>
+    <canvas id="pixel-grid-overlay"></canvas>
     <div class="view-label" id="label-god">GOD'S EYE VIEW</div>
     <div class="view-label" id="label-cam">CAMERA VIEW</div>
     <div id="viewport-rect-overlay"></div>
