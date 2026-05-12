@@ -121,9 +121,9 @@ export function buildDetail3() {
  * Activates or deactivates split-view mode to display both god-eye and camera perspectives.
  *
  * When enabled, the viewport is split to show two simultaneous views: the orthogonal
- * god-eye camera and the perspective camera. The {@link S.cameraHelper} becomes visible
- * to aid in understanding camera positioning. When disabled, only the main perspective
- * view is shown.
+ * god-eye camera and the perspective camera. The render loop shows {@link S.cameraHelper}
+ * only during the god-eye pass to aid in understanding camera positioning. When disabled,
+ * only the main perspective view is shown.
  *
  * @param {boolean} on - If `true`, split-view mode is activated; if `false`, it is
  *                       deactivated.
@@ -134,7 +134,7 @@ export function applySplitView(on) {
   godCanvas.classList.toggle('split-active', on);
   document.getElementById('label-god').style.display = on ? 'block' : 'none';
   document.getElementById('label-cam').style.display = on ? 'block' : 'none';
-  S.cameraHelper.visible = on;
+  S.cameraHelper.visible = false;
   S.resizeAll?.();
 }
 

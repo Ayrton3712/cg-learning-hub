@@ -495,6 +495,7 @@ function render() {
     S.cameraHelper.visible = true;
     S.godRenderer.render(S.scene, S.godCamera);
   }
+  if (S.cameraHelper) S.cameraHelper.visible = false;
 
   if (S.s4ProjOn && S.stages[3]) {
     S.renderer.render(S.scene, getOrthoCamera());
