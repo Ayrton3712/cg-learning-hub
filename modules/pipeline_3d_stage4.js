@@ -37,83 +37,145 @@ export function buildDetail3() {
       <div class="notice-box">Projection: Orthographic</div>
     </div>
   `;
+  
+  attachDetail3Listeners();
+}
 
-  document.getElementById('s4-viewing').addEventListener('click', function() {
-    S.s4ViewingOn = !S.s4ViewingOn;
-    this.classList.toggle('on', S.s4ViewingOn);
-    if (!S.viewAxesHelper && S.s4ViewingOn) {
-      S.viewAxesHelper = new THREE.AxesHelper(2);
-      S.scene.add(S.viewAxesHelper);
-    } else if (S.viewAxesHelper) {
-      S.viewAxesHelper.visible = S.s4ViewingOn;
-    }
-  });
+/**
+ * Updates the Stage 4 detail panel UI state and reattaches event listeners.
+ *
+ * This function is called whenever the detail panel is opened to ensure all buttons
+ * reflect the current state and event listeners are properly wired.
+ */
+export function updateDetail3() {
+  // Sync button visual states
+  const s4ViewingBtn = document.getElementById('s4-viewing');
+  const s4ClipBtn = document.getElementById('s4-clip');
+  const s4HSRBtn = document.getElementById('s4-hsr');
+  const s4ProjBtn = document.getElementById('s4-proj');
 
-  document.getElementById('s4-clip').addEventListener('click', function() {
-    S.s4ClipOn = !S.s4ClipOn;
-    this.classList.toggle('on', S.s4ClipOn);
-    document.getElementById('s4-clip-controls').style.display = S.s4ClipOn ? '' : 'none';
-    if (!S.s4ClipOn) {
-      S.camera.near = 0.1;
-      S.camera.far = 200;
+  if (s4ViewingBtn) s4ViewingBtn.classList.toggle('on', S.s4ViewingOn);
+  if (s4ClipBtn) s4ClipBtn.classList.toggle('on', S.s4ClipOn);
+  if (s4HSRBtn) s4HSRBtn.classList.toggle('on', S.s4HSROn);
+  if (s4ProjBtn) s4ProjBtn.classList.toggle('on', S.s4ProjOn);
+
+  // Show/hide dependent controls
+  const clipControls = document.getElementById('s4-clip-controls');
+  const projLabel = document.getElementById('proj-label');
+  if (clipControls) clipControls.style.display = S.s4ClipOn ? '' : 'none';
+  if (projLabel) projLabel.style.display = S.s4ProjOn ? '' : 'none';
+
+  // Reattach listeners
+  attachDetail3Listeners();
+}
+
+function attachDetail3Listeners() {
+  const s4ViewingBtn = document.getElementById('s4-viewing');
+  if (s4ViewingBtn) {
+    s4ViewingBtn.onclick = function() {
+      S.s4ViewingOn = !S.s4ViewingOn;
+      this.classList.toggle('on', S.s4ViewingOn);
+      if (!S.viewAxesHelper && S.s4ViewingOn) {
+        S.viewAxesHelper = new THREE.AxesHelper(2);
+        S.scene.add(S.viewAxesHelper);
+      } else if (S.viewAxesHelper) {
+        S.viewAxesHelper.visible = S.s4ViewingOn;
+      }
+    };
+  }
+
+  const s4ClipBtn = document.getElementById('s4-clip');
+  if (s4ClipBtn) {
+    s4ClipBtn.onclick = function() {
+      S.s4ClipOn = !S.s4ClipOn;
+      this.classList.toggle('on', S.s4ClipOn);
+      const clipControls = document.getElementById('s4-clip-controls');
+      if (clipControls) clipControls.style.display = S.s4ClipOn ? '' : 'none';
+      if (!S.s4ClipOn) {
+        S.camera.near = 0.1;
+        S.camera.far = 200;
+        S.camera.updateProjectionMatrix();
+      }
+    };
+  }
+
+  const s4NearInput = document.getElementById('s4-near');
+  if (s4NearInput) {
+    s4NearInput.oninput = function() {
+      S.s4NearVal = parseFloat(this.value);
+      const nearVal = document.getElementById('s4-near-v');
+      if (nearVal) nearVal.textContent = S.s4NearVal.toFixed(2);
+      S.camera.near = S.s4NearVal;
       S.camera.updateProjectionMatrix();
-    }
-  });
+      if (S.cameraHelper) S.cameraHelper.update();
+    };
+  }
 
-  document.getElementById('s4-near').addEventListener('input', function() {
-    S.s4NearVal = parseFloat(this.value);
-    document.getElementById('s4-near-v').textContent = S.s4NearVal.toFixed(2);
-    S.camera.near = S.s4NearVal;
-    S.camera.updateProjectionMatrix();
-    if (S.cameraHelper) S.cameraHelper.update();
-  });
+  const s4FarInput = document.getElementById('s4-far');
+  if (s4FarInput) {
+    s4FarInput.oninput = function() {
+      S.s4FarVal = parseFloat(this.value);
+      const farVal = document.getElementById('s4-far-v');
+      if (farVal) farVal.textContent = S.s4FarVal;
+      S.camera.far = S.s4FarVal;
+      S.camera.updateProjectionMatrix();
+      if (S.cameraHelper) S.cameraHelper.update();
+    };
+  }
 
-  document.getElementById('s4-far').addEventListener('input', function() {
-    S.s4FarVal = parseFloat(this.value);
-    document.getElementById('s4-far-v').textContent = S.s4FarVal;
-    S.camera.far = S.s4FarVal;
-    S.camera.updateProjectionMatrix();
-    if (S.cameraHelper) S.cameraHelper.update();
-  });
-
-  document.getElementById('s4-hsr').addEventListener('click', function() {
-    S.s4HSROn = !S.s4HSROn;
-    this.classList.toggle('on', S.s4HSROn);
-    S.objectDefs.forEach(def => {
-      if (!def.reprGroup) return;
-      def.reprGroup.traverse(obj => {
-        if (obj.isMesh && obj.material) {
-          obj.material.side = S.s4HSROn ? THREE.FrontSide : THREE.DoubleSide;
-          obj.material.needsUpdate = true;
-        }
+  const s4HSRBtn = document.getElementById('s4-hsr');
+  if (s4HSRBtn) {
+    s4HSRBtn.onclick = function() {
+      S.s4HSROn = !S.s4HSROn;
+      this.classList.toggle('on', S.s4HSROn);
+      S.objectDefs.forEach(def => {
+        if (!def.reprGroup) return;
+        def.reprGroup.traverse(obj => {
+          if (obj.isMesh && obj.material) {
+            obj.material.side = S.s4HSROn ? THREE.FrontSide : THREE.DoubleSide;
+            obj.material.needsUpdate = true;
+          }
+        });
       });
-    });
-  });
+    };
+  }
 
-  document.getElementById('s4-proj').addEventListener('click', function() {
-    S.s4ProjOn = !S.s4ProjOn;
-    this.classList.toggle('on', S.s4ProjOn);
-    document.getElementById('proj-label').style.display = S.s4ProjOn ? '' : 'none';
-  });
+  const s4ProjBtn = document.getElementById('s4-proj');
+  if (s4ProjBtn) {
+    s4ProjBtn.onclick = function() {
+      S.s4ProjOn = !S.s4ProjOn;
+      this.classList.toggle('on', S.s4ProjOn);
+      const projLabel = document.getElementById('proj-label');
+      if (projLabel) projLabel.style.display = S.s4ProjOn ? '' : 'none';
+    };
+  }
 
-  document.getElementById('cam-fov').addEventListener('input', function() {
-    document.getElementById('cam-fov-v').textContent = this.value + '°';
-    S.camera.fov = parseInt(this.value);
-    S.camera.updateProjectionMatrix();
-    if (S.cameraHelper) S.cameraHelper.update();
-  });
+  const camFovInput = document.getElementById('cam-fov');
+  if (camFovInput) {
+    camFovInput.oninput = function() {
+      const fovVal = document.getElementById('cam-fov-v');
+      if (fovVal) fovVal.textContent = this.value + '°';
+      S.camera.fov = parseInt(this.value);
+      S.camera.updateProjectionMatrix();
+      if (S.cameraHelper) S.cameraHelper.update();
+    };
+  }
 
   ['cam-x', 'cam-y', 'cam-z'].forEach(id => {
-    document.getElementById(id).addEventListener('input', function() {
-      document.getElementById(id + '-v').textContent = parseFloat(this.value).toFixed(1);
-      S.camera.position.set(
-        parseFloat(document.getElementById('cam-x').value),
-        parseFloat(document.getElementById('cam-y').value),
-        parseFloat(document.getElementById('cam-z').value)
-      );
-      S.camera.lookAt(S.orbit.target);
-      if (S.cameraHelper) S.cameraHelper.update();
-    });
+    const input = document.getElementById(id);
+    if (input) {
+      input.oninput = function() {
+        const valEl = document.getElementById(id + '-v');
+        if (valEl) valEl.textContent = parseFloat(this.value).toFixed(1);
+        S.camera.position.set(
+          parseFloat(document.getElementById('cam-x').value),
+          parseFloat(document.getElementById('cam-y').value),
+          parseFloat(document.getElementById('cam-z').value)
+        );
+        S.camera.lookAt(S.orbit.target);
+        if (S.cameraHelper) S.cameraHelper.update();
+      };
+    }
   });
 }
 

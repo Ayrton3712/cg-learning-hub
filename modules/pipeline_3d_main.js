@@ -385,6 +385,7 @@ function updateDetailPanels() {
   }
   if (S.openDetail === 0) updateDetail0();
   if (S.openDetail === 1) updateDetail1();
+  if (S.openDetail === 3) updateDetail3();
 }
 S.updateDetailPanels = updateDetailPanels;
 
