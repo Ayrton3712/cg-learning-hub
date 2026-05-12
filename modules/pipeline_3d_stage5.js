@@ -4,6 +4,10 @@
 
 import { S } from './pipeline_3d_state.js';
 
+export function getStage5RenderPixelSize() {
+  return S.s5AAOn ? Math.max(1, S.pixelSize / 2) : S.pixelSize;
+}
+
 export function buildDetail4() {
   document.getElementById('detail-4').innerHTML = `
     <div class="detail-section">
@@ -28,6 +32,7 @@ export function buildDetail4() {
   document.getElementById('s5-aa').addEventListener('click', function() {
     S.s5AAOn = !S.s5AAOn;
     this.classList.toggle('on', S.s5AAOn);
+    updateEffRes();
   });
 
   document.getElementById('s5-scan').addEventListener('click', function() {
@@ -79,8 +84,9 @@ export function updateEffRes() {
   const wrap = document.getElementById('viewport-wrap');
   const w = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
   const h = wrap.clientHeight;
-  const ew = Math.floor(w / S.pixelSize);
-  const eh = Math.floor(h / S.pixelSize);
+  const renderPixelSize = getStage5RenderPixelSize();
+  const ew = Math.floor(w / renderPixelSize);
+  const eh = Math.floor(h / renderPixelSize);
   const el = document.getElementById('eff-res');
   if (el) el.textContent = `Effective: ${ew}×${eh}`;
 }
@@ -100,14 +106,9 @@ export function drawZoomInset() {
   const cropY = Math.floor((srcH - cropH) / 2);
 
   zoomCtx.clearRect(0, 0, w, h);
-  zoomCtx.imageSmoothingEnabled = false;
+  zoomCtx.imageSmoothingEnabled = S.s5AAOn;
+  zoomCtx.imageSmoothingQuality = S.s5AAOn ? 'high' : 'low';
   zoomCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
-
-  if (S.s5AAOn) {
-    zoomCtx.filter = 'blur(1px)';
-    zoomCtx.drawImage(zoomCanvas, 0, 0);
-    zoomCtx.filter = 'none';
-  }
 
   if (S.s5GridOn) {
     const cellW = w / (cropW / S.pixelSize);

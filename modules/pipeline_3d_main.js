@@ -7,7 +7,7 @@ import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection } 
 import { buildDetail1, updateDetail1 } from './pipeline_3d_stage2.js';
 import { buildDetail2 } from './pipeline_3d_stage3.js';
 import { buildDetail3, applySplitView, getOrthoCamera } from './pipeline_3d_stage4.js';
-import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset } from './pipeline_3d_stage5.js';
+import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset, getStage5RenderPixelSize } from './pipeline_3d_stage5.js';
 
 // ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
 S.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('main-canvas'), antialias: true });
@@ -483,12 +483,13 @@ function render() {
     const wrap = document.getElementById('viewport-wrap');
     const W = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
     const H = wrap.clientHeight;
-    const effW = Math.max(1, Math.floor(W / S.pixelSize));
-    const effH = Math.max(1, Math.floor(H / S.pixelSize));
+    const renderPixelSize = getStage5RenderPixelSize();
+    const effW = Math.max(1, Math.floor(W / renderPixelSize));
+    const effH = Math.max(1, Math.floor(H / renderPixelSize));
     S.renderer.setSize(effW, effH, false);
     mainCanvas.style.width  = W + 'px';
     mainCanvas.style.height = H + 'px';
-    mainCanvas.style.imageRendering = 'pixelated';
+    mainCanvas.style.imageRendering = S.s5AAOn ? 'auto' : 'pixelated';
   }
 
   if (S.splitActive && S.stages[3]) {
