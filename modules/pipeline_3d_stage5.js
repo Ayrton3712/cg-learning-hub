@@ -1,5 +1,5 @@
 // Stage 5 — Scan Conversion
-// Handles pixelation, AA, scanline animation, pixel grid, zoom inset,
+// Handles pixelation, AA, raster sweep, pixel grid, zoom inset,
 // and the Stage 5 detail panel.
 
 import { S } from './pipeline_3d_state.js';
@@ -18,7 +18,7 @@ export function buildDetail4() {
     <div class="detail-section">
       <div class="detail-label">Options</div>
       <div class="detail-toggle-row"><span>Anti-aliasing</span><button class="mini-toggle" id="s5-aa"></button></div>
-      <div class="detail-toggle-row"><span>Scanline Anim</span><button class="mini-toggle" id="s5-scan"></button></div>
+      <div class="detail-toggle-row"><span>Raster Sweep</span><button class="mini-toggle" id="s5-scan"></button></div>
       <div class="detail-toggle-row"><span>Pixel Grid</span><button class="mini-toggle" id="s5-grid"></button></div>
     </div>
   `;
@@ -38,7 +38,7 @@ export function buildDetail4() {
   document.getElementById('s5-scan').addEventListener('click', function() {
     S.s5ScanlineOn = !S.s5ScanlineOn;
     this.classList.toggle('on', S.s5ScanlineOn);
-    document.getElementById('scanline-bar').style.display = S.s5ScanlineOn ? 'block' : 'none';
+    if (S.s5ScanlineOn) S.scanlineY = 0;
   });
 
   document.getElementById('s5-grid').addEventListener('click', function() {
@@ -91,6 +91,31 @@ export function updateEffRes() {
   if (el) el.textContent = `Effective: ${ew}×${eh}`;
 }
 
+function drawRasterSweep(ctx, w, h) {
+  const y = Math.floor(S.scanlineY % h);
+  const rowHeight = Math.max(2, Math.min(12, S.pixelSize));
+  const scanlineColor = getComputedStyle(document.documentElement)
+    .getPropertyValue('--accent-scanline')
+    .trim() || 'rgba(0,112,192,0.75)';
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.2)';
+  ctx.fillRect(0, Math.min(h, y + rowHeight), w, Math.max(0, h - y - rowHeight));
+
+  ctx.fillStyle = scanlineColor;
+  ctx.globalAlpha = 0.18;
+  ctx.fillRect(0, y, w, rowHeight);
+
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = scanlineColor;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0, y + 0.5);
+  ctx.lineTo(w, y + 0.5);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export function drawZoomInset() {
   if (!S.stages[4]) return;
   const mainCanvas = document.getElementById('main-canvas');
@@ -109,6 +134,8 @@ export function drawZoomInset() {
   zoomCtx.imageSmoothingEnabled = S.s5AAOn;
   zoomCtx.imageSmoothingQuality = S.s5AAOn ? 'high' : 'low';
   zoomCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
+
+  if (S.s5ScanlineOn) drawRasterSweep(zoomCtx, w, h);
 
   if (S.s5GridOn) {
     const cellW = w / (cropW / S.pixelSize);

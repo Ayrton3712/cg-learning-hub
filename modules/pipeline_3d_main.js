@@ -474,9 +474,8 @@ function render() {
   if (S.cameraHelper && S.stages[3]) S.cameraHelper.update();
 
   if (S.stages[4] && S.s5ScanlineOn) {
-    const bar = document.getElementById('scanline-bar');
-    S.scanlineY = (S.scanlineY + 0.5) % 150;
-    bar.style.top = S.scanlineY + 'px';
+    const zoomCanvas = document.getElementById('zoom-canvas');
+    S.scanlineY = (S.scanlineY + 0.75) % zoomCanvas.height;
   }
 
   if (S.stages[4]) {

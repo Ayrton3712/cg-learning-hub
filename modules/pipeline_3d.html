@@ -460,17 +460,6 @@ body {
   z-index: 10;
 }
 
-/* SCANLINE in zoom */
-#scanline-bar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent-scanline);
-  pointer-events: none;
-  display: none;
-}
-
 /* Represented object warning */
 .warn-text { color: var(--accent2); font-size: 12px; font-style: italic; }
 
@@ -555,7 +544,6 @@ body {
     <div id="zoom-inset">
       <div id="zoom-label">PIXEL ZOOM</div>
       <canvas id="zoom-canvas" width="200" height="150"></canvas>
-      <div id="scanline-bar"></div>
     </div>
   </div>
 
