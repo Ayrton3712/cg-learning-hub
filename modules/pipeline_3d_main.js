@@ -3,7 +3,7 @@
 
 import { S, THEMES } from './pipeline_3d_state.js';
 import { initLandscape, applyTerrainMaterial, terrainHeight, updateSunPosition } from './pipeline_3d_landscape.js';
-import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection } from './pipeline_3d_stage1.js';
+import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection, updateHSRVisibility } from './pipeline_3d_stage1.js';
 import { buildDetail1, updateDetail1 } from './pipeline_3d_stage2.js';
 import { buildDetail2 } from './pipeline_3d_stage3.js';
 import { buildDetail3, applySplitView, getOrthoCamera, updateDetail3 } from './pipeline_3d_stage4.js';
@@ -473,6 +473,9 @@ function render() {
   }
 
   if (S.cameraHelper && S.stages[3]) S.cameraHelper.update();
+
+  // Update HSR visibility based on current camera position
+  updateHSRVisibility();
 
   if (S.stages[4] && S.s5ScanlineOn) {
     const bar = document.getElementById('scanline-bar');

@@ -3,6 +3,7 @@
 // camera controls, split-view, and the Stage 4 detail panel.
 
 import { S } from './pipeline_3d_state.js';
+import { applyHSRToGroup } from './pipeline_3d_stage1.js';
 
 /**
  * Builds and populates the Stage 4 detail panel with viewing controls.
@@ -33,6 +34,9 @@ export function buildDetail3() {
       <div class="slider-row"><label>CamY</label><input type="range" id="cam-y" min="0" max="15" step="0.1" value="4"><span class="slider-val" id="cam-y-v">4.0</span></div>
       <div class="slider-row"><label>CamZ</label><input type="range" id="cam-z" min="-10" max="10" step="0.1" value="7"><span class="slider-val" id="cam-z-v">7.0</span></div>
     </div>
+    <div id="viewing-label" class="detail-section" style="display:none">
+      <div class="notice-box">Viewing: World Transform Axes</div>
+    </div>
     <div id="proj-label" class="detail-section" style="display:none">
       <div class="notice-box">Projection: Orthographic</div>
     </div>
@@ -61,8 +65,10 @@ export function updateDetail3() {
 
   // Show/hide dependent controls
   const clipControls = document.getElementById('s4-clip-controls');
+  const viewingLabel = document.getElementById('viewing-label');
   const projLabel = document.getElementById('proj-label');
   if (clipControls) clipControls.style.display = S.s4ClipOn ? '' : 'none';
+  if (viewingLabel) viewingLabel.style.display = S.s4ViewingOn ? '' : 'none';
   if (projLabel) projLabel.style.display = S.s4ProjOn ? '' : 'none';
 
   // Reattach listeners
@@ -75,8 +81,11 @@ function attachDetail3Listeners() {
     s4ViewingBtn.onclick = function() {
       S.s4ViewingOn = !S.s4ViewingOn;
       this.classList.toggle('on', S.s4ViewingOn);
+      const viewingLabel = document.getElementById('viewing-label');
+      if (viewingLabel) viewingLabel.style.display = S.s4ViewingOn ? '' : 'none';
       if (!S.viewAxesHelper && S.s4ViewingOn) {
-        S.viewAxesHelper = new THREE.AxesHelper(2);
+        // Create a larger, more visible axes helper (size 4 instead of 2)
+        S.viewAxesHelper = new THREE.AxesHelper(4);
         S.scene.add(S.viewAxesHelper);
       } else if (S.viewAxesHelper) {
         S.viewAxesHelper.visible = S.s4ViewingOn;
@@ -130,12 +139,7 @@ function attachDetail3Listeners() {
       this.classList.toggle('on', S.s4HSROn);
       S.objectDefs.forEach(def => {
         if (!def.reprGroup) return;
-        def.reprGroup.traverse(obj => {
-          if (obj.isMesh && obj.material) {
-            obj.material.side = S.s4HSROn ? THREE.FrontSide : THREE.DoubleSide;
-            obj.material.needsUpdate = true;
-          }
-        });
+        applyHSRToGroup(def.reprGroup, S.s4HSROn);
       });
     };
   }

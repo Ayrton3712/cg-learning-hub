@@ -22,13 +22,127 @@ export function disposeGroup(g) {
   });
 }
 
+/**
+ * Apply hidden surface removal based on camera visibility.
+ * When HSR is on, only surfaces that face the camera are visible.
+ * When HSR is off, both front and back faces are visible (DoubleSide).
+ * 
+ * Uses a dot product test: if the surface normal points towards the camera,
+ * it's visible. Otherwise, it's hidden.
+ * 
+ * This ONLY applies to actual mesh surfaces, not helper visualizations like wireframes.
+ */
+export function applyHSRToGroup(group, hsrOn) {
+  group.traverse(obj => {
+    // Only apply to Mesh objects (excludes LineSegments, Lines, Groups, etc.)
+    if (!obj.isMesh || !obj.material) return;
+    
+    // Ensure geometry has proper normals for back-face culling to work
+    if (obj.geometry && !obj.geometry.attributes.normal) {
+      obj.geometry.computeVertexNormals();
+    }
+    
+    // Handle both single material and material arrays
+    const materials = Array.isArray(obj.material) ? obj.material : [obj.material];
+    materials.forEach(mat => {
+      if (hsrOn) {
+        // HSR is ON: compute visibility based on camera position
+        mat.side = THREE.DoubleSide; // Allow both sides initially for rendering
+        mat.colorWrite = true;
+        // Update function will handle actual visibility culling
+        updateMeshCameraVisibility(obj);
+      } else {
+        // HSR is OFF: show all faces
+        mat.side = THREE.DoubleSide;
+        mat.colorWrite = true;
+        obj.userData.hsrHidden = false;
+      }
+      mat.needsUpdate = true;
+    });
+  });
+}
+
+/**
+ * Compute if a mesh is visible from the camera and update its visibility.
+ * Meshes are hidden if all their face normals point away from the camera.
+ */
+function updateMeshCameraVisibility(mesh) {
+  if (!S.camera) return;
+  
+  // Get mesh center in world space
+  const meshCenter = new THREE.Vector3();
+  mesh.getWorldPosition(meshCenter);
+  
+  // Get camera position
+  const camPos = S.camera.position;
+  
+  // Vector from mesh to camera
+  const meshToCamera = new THREE.Vector3().subVectors(camPos, meshCenter);
+  
+  // Get averaged normal of the geometry
+  const geo = mesh.geometry;
+  if (!geo.attributes.normal) {
+    geo.computeVertexNormals();
+  }
+  
+  // Compute average face normal
+  const normalAttr = geo.attributes.normal;
+  let avgNx = 0, avgNy = 0, avgNz = 0;
+  
+  // Sample normals (sample every Nth vertex for efficiency)
+  const sampleStep = Math.max(1, Math.floor(normalAttr.count / 50));
+  let count = 0;
+  for (let i = 0; i < normalAttr.count; i += sampleStep) {
+    avgNx += normalAttr.getX(i);
+    avgNy += normalAttr.getY(i);
+    avgNz += normalAttr.getZ(i);
+    count++;
+  }
+  
+  const avgNormal = new THREE.Vector3(avgNx / count, avgNy / count, avgNz / count);
+  avgNormal.normalize();
+  
+  // Transform normal to world space
+  const worldNormal = avgNormal.clone();
+  // Apply rotation from mesh to transform normal correctly
+  const quaternion = new THREE.Quaternion();
+  mesh.getWorldQuaternion(quaternion);
+  worldNormal.applyQuaternion(quaternion);
+  
+  // Check if normal points towards camera
+  const dotProduct = worldNormal.dot(meshToCamera.normalize());
+  
+  // Mesh is visible if it faces the camera (dot product > small threshold)
+  const isVisible = dotProduct > -0.1; // Small negative threshold for edge cases
+  
+  mesh.userData.hsrHidden = !isVisible;
+  mesh.visible = isVisible;
+}
+
+/**
+ * Update HSR visibility for all objects based on current camera position.
+ * Should be called during the render loop when HSR is active.
+ */
+export function updateHSRVisibility() {
+  if (!S.s4HSROn) return;
+  
+  S.objectDefs.forEach(def => {
+    if (!def.reprGroup) return;
+    def.reprGroup.traverse(obj => {
+      if (obj.isMesh && obj.material && !obj.userData.isHelper) {
+        updateMeshCameraVisibility(obj);
+      }
+    });
+  });
+}
+
 // ─── BREP PROP BUILDERS ───────────────────────────────────────────────────────
 function buildTreeMeshes(group, def, useLit, useGray) {
   function mat(color, grayColor, roughness = 0.85) {
     const c = useGray ? grayColor : color;
     return useLit
-      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0 })
-      : new THREE.MeshBasicMaterial({ color: c });
+      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0, side: THREE.FrontSide })
+      : new THREE.MeshBasicMaterial({ color: c, side: THREE.FrontSide });
   }
   const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 0.7, 8), mat(0x4a2e00, 0x707070, 0.95));
   trunk.position.y = 0.35;
@@ -57,8 +171,8 @@ function buildRockMesh(group, def, useLit, useGray) {
 
   const rockColor = useGray ? 0x909090 : 0x7a7065;
   const mesh = new THREE.Mesh(geo, useLit
-    ? new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, metalness: 0.05 })
-    : new THREE.MeshBasicMaterial({ color: rockColor }));
+    ? new THREE.MeshStandardMaterial({ color: rockColor, roughness: 0.92, metalness: 0.05, side: THREE.FrontSide })
+    : new THREE.MeshBasicMaterial({ color: rockColor, side: THREE.FrontSide }));
   mesh.position.y = 0.3;
   mesh.castShadow = true;
   def.mesh = mesh;
@@ -69,8 +183,8 @@ function buildCabinMeshes(group, def, useLit, useGray) {
   function mat(color, grayColor, roughness = 0.9) {
     const c = useGray ? grayColor : color;
     return useLit
-      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0 })
-      : new THREE.MeshBasicMaterial({ color: c });
+      ? new THREE.MeshStandardMaterial({ color: c, roughness, metalness: 0, side: THREE.FrontSide })
+      : new THREE.MeshBasicMaterial({ color: c, side: THREE.FrontSide });
   }
   const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.2), mat(0x8b5e3c, 0x808080));
   body.position.y = 0.45;
@@ -106,8 +220,8 @@ export function buildRepr(def) {
 
   function makeStdMat() {
     return useLit
-      ? new THREE.MeshStandardMaterial({ color: effectiveColor, roughness: 0.6, metalness: 0.1 })
-      : new THREE.MeshBasicMaterial({ color: effectiveColor });
+      ? new THREE.MeshStandardMaterial({ color: effectiveColor, roughness: 0.6, metalness: 0.1, side: THREE.FrontSide })
+      : new THREE.MeshBasicMaterial({ color: effectiveColor, side: THREE.FrontSide });
   }
 
   switch (def.repr) {
@@ -132,6 +246,7 @@ export function buildRepr(def) {
           );
           wire.matrix.copy(m.matrix);
           wire.matrixAutoUpdate = false;
+          wire.userData.isHelper = true; // Mark wireframe as helper
           group.add(wire);
         });
       }
@@ -159,6 +274,7 @@ export function buildRepr(def) {
           const normLines = new THREE.LineSegments(normGeo, new THREE.LineBasicMaterial({ color: 0x00cc66 }));
           normLines.matrix.copy(m.matrix);
           normLines.matrixAutoUpdate = false;
+          normLines.userData.isHelper = true; // Mark normals as helper
           group.add(normLines);
         });
       }
@@ -305,6 +421,10 @@ export function buildRepr(def) {
 
   group.userData.defRef = def;
   def.reprGroup = group;
+  
+  // Apply initial HSR state to all meshes
+  applyHSRToGroup(group, S.s4HSROn);
+  
   S.scene.add(group);
   return group;
 }
@@ -334,6 +454,7 @@ export function selectObject(def) {
       outline.matrix.copy(mesh.matrix);
       outline.matrixAutoUpdate = false;
       outline.userData.isSelectionHighlight = true;
+      outline.userData.isHelper = true; // Mark as helper so HSR doesn't hide it
       def.reprGroup.add(outline);
     });
   }
