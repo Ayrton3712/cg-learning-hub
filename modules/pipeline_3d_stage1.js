@@ -263,7 +263,6 @@ export function buildRepr(def) {
     case 'sweep': {
       // Cabin is blocked upstream. Tree and rock use per-object profiles.
       const sweepAngle = THREE.MathUtils.degToRad(def.sweepAngle);
-      const profileOffset = 0.9; // x-offset for the 2-D profile guide line
 
       function addSweep(pts, setAsMesh) {
         const m = new THREE.Mesh(
@@ -273,10 +272,6 @@ export function buildRepr(def) {
         m.castShadow = true;
         if (setAsMesh) def.mesh = m;
         group.add(m);
-        const lineGeo = new THREE.BufferGeometry().setFromPoints(
-          pts.map(p => new THREE.Vector3(p.x + profileOffset, p.y, 0))
-        );
-        group.add(new THREE.Line(lineGeo, new THREE.LineBasicMaterial({ color: getWireColor() })));
       }
 
       if (def.geoType === 'tree') {
