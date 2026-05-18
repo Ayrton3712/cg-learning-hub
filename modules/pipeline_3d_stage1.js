@@ -275,15 +275,18 @@ export function buildRepr(def) {
       }
 
       if (def.geoType === 'tree') {
-        // Trunk: tapered cylinder — radiusBottom 0.14, radiusTop 0.08, height 0.7
+        // Trunk: closed tapered cylinder — cap points at x=0 close top and bottom.
         addSweep([
-          new THREE.Vector2(0.14, 0),
-          new THREE.Vector2(0.08, 0.7),
+          new THREE.Vector2(0,    0),    // bottom cap centre
+          new THREE.Vector2(0.14, 0),   // bottom edge
+          new THREE.Vector2(0.08, 0.7), // top edge
+          new THREE.Vector2(0,    0.7), // top cap centre
         ], true);
-        // Foliage: cone — base radius 0.55 at y=0.7, apex at y=2.2
+        // Foliage: cone with closed base — apex at x=0 closes the top naturally.
         addSweep([
-          new THREE.Vector2(0.55, 0.7),
-          new THREE.Vector2(0,    2.2),
+          new THREE.Vector2(0,    0.7), // bottom cap centre
+          new THREE.Vector2(0.55, 0.7), // base edge
+          new THREE.Vector2(0,    2.2), // apex
         ], false);
       } else {
         // Rock: semicircle profile, radius 0.52, centred at y=0.3
