@@ -4,6 +4,58 @@
 
 import { S } from './pipeline_3d_state.js';
 
+// ─── FRUSTUM CULLING & CAMERA PROJECTION HELPERS ─────────────────────────────
+
+/**
+ * Toggle frustum culling on all meshes in the scene.
+ * When enabled (true): Objects outside camera view and clipping window (near/far planes) are culled.
+ * When disabled (false): All objects are rendered regardless of clipping window.
+ * The camera's near/far planes define the clipping window boundaries.
+ * Excludes lights and helper objects from culling to prevent shadow issues.
+ * 
+ * @param {boolean} enabled - If true, frustum culling is active; if false, all objects render
+ */
+function setFrustumCulling(enabled) {
+  S.scene.traverse(obj => {
+    // Only cull actual renderable objects, exclude lights and helpers
+    if ((obj.isMesh || obj.isPoints || obj.isLine) && !obj.isLight) {
+      // Don't cull helper objects like camera helpers
+      if (!obj.name.includes('Helper') && !obj.name.includes('helper')) {
+        obj.frustumCulled = enabled;
+      }
+    }
+  });
+}
+
+/**
+ * Update camera projection matrix with correct aspect ratio and sync with canvas size.
+ * Call this on window resize to prevent stretched/warped view.
+ */
+function syncCameraProjection() {
+  const wrap = document.getElementById('viewport-wrap');
+  if (!wrap) return;
+  
+  const width = wrap.clientWidth;
+  const height = wrap.clientHeight;
+  
+  if (width > 0 && height > 0 && S.camera) {
+    const aspect = width / height;
+    if (Math.abs(S.camera.aspect - aspect) > 0.001) {
+      S.camera.aspect = aspect;
+      S.camera.updateProjectionMatrix();
+    }
+  }
+}
+
+/**
+ * Monitor window resize and sync camera projection to prevent distortion.
+ */
+function setupCameraResizeHandler() {
+  window.addEventListener('resize', () => {
+    syncCameraProjection();
+  });
+}
+
 /**
  * Builds and populates the Stage 4 detail panel with viewing controls.
  *
@@ -20,7 +72,6 @@ export function buildDetail3() {
       <div class="detail-toggle-row"><span>1. Viewing Transform</span><button class="mini-toggle" id="s4-viewing"></button></div>
       <div class="detail-toggle-row"><span>2. Clipping</span><button class="mini-toggle" id="s4-clip"></button></div>
       <div class="detail-toggle-row"><span>3. Hidden Surface</span><button class="mini-toggle on" id="s4-hsr"></button></div>
-      <div class="detail-toggle-row"><span>4. Projection</span><button class="mini-toggle" id="s4-proj"></button></div>
     </div>
     <div id="s4-clip-controls" class="detail-section" style="display:none">
       <div class="slider-row"><label>Near</label><input type="range" id="s4-near" min="0.01" max="5" step="0.01" value="0.1"><span class="slider-val" id="s4-near-v">0.10</span></div>
@@ -33,12 +84,10 @@ export function buildDetail3() {
       <div class="slider-row"><label>CamY</label><input type="range" id="cam-y" min="0" max="15" step="0.1" value="4"><span class="slider-val" id="cam-y-v">4.0</span></div>
       <div class="slider-row"><label>CamZ</label><input type="range" id="cam-z" min="-10" max="10" step="0.1" value="7"><span class="slider-val" id="cam-z-v">7.0</span></div>
     </div>
-    <div id="proj-label" class="detail-section" style="display:none">
-      <div class="notice-box">Projection: Orthographic</div>
-    </div>
   `;
   
   attachDetail3Listeners();
+  setupCameraResizeHandler();
 }
 
 /**
@@ -52,38 +101,35 @@ export function updateDetail3() {
   const s4ViewingBtn = document.getElementById('s4-viewing');
   const s4ClipBtn = document.getElementById('s4-clip');
   const s4HSRBtn = document.getElementById('s4-hsr');
-  const s4ProjBtn = document.getElementById('s4-proj');
 
   if (s4ViewingBtn) s4ViewingBtn.classList.toggle('on', S.s4ViewingOn);
   if (s4ClipBtn) s4ClipBtn.classList.toggle('on', S.s4ClipOn);
   if (s4HSRBtn) s4HSRBtn.classList.toggle('on', S.s4HSROn);
-  if (s4ProjBtn) s4ProjBtn.classList.toggle('on', S.s4ProjOn);
 
   // Show/hide dependent controls
   const clipControls = document.getElementById('s4-clip-controls');
-  const projLabel = document.getElementById('proj-label');
   if (clipControls) clipControls.style.display = S.s4ClipOn ? '' : 'none';
-  if (projLabel) projLabel.style.display = S.s4ProjOn ? '' : 'none';
 
   // Reattach listeners
   attachDetail3Listeners();
 }
 
 function attachDetail3Listeners() {
+  // ========== 1. VIEWING TRANSFORM TOGGLE ==========
+  // On: Split-view (camera view + god's eye)
+  // Off: Single view (camera only)
   const s4ViewingBtn = document.getElementById('s4-viewing');
   if (s4ViewingBtn) {
     s4ViewingBtn.onclick = function() {
       S.s4ViewingOn = !S.s4ViewingOn;
       this.classList.toggle('on', S.s4ViewingOn);
-      if (!S.viewAxesHelper && S.s4ViewingOn) {
-        S.viewAxesHelper = new THREE.AxesHelper(2);
-        S.scene.add(S.viewAxesHelper);
-      } else if (S.viewAxesHelper) {
-        S.viewAxesHelper.visible = S.s4ViewingOn;
-      }
+      applySplitView(!S.s4ViewingOn);
     };
   }
 
+  // ========== 2. CLIPPING ==========
+  // Shows clipping window visualization in god's eye view (always when Clipping is ON)
+  // Only applies actual clipping (removes objects) when Hidden Surface Removal is also ON
   const s4ClipBtn = document.getElementById('s4-clip');
   if (s4ClipBtn) {
     s4ClipBtn.onclick = function() {
@@ -91,7 +137,18 @@ function attachDetail3Listeners() {
       this.classList.toggle('on', S.s4ClipOn);
       const clipControls = document.getElementById('s4-clip-controls');
       if (clipControls) clipControls.style.display = S.s4ClipOn ? '' : 'none';
-      if (!S.s4ClipOn) {
+      
+      // Show/hide clipping window visualization in god's eye
+      if (S.s4ClipOn && S.cameraHelper) {
+        // Always show clipping window when Clipping is ON (regardless of HSR)
+        S.cameraHelper.visible = true;
+      } else if (!S.s4ClipOn && S.cameraHelper) {
+        // Hide clipping window only when Clipping is OFF
+        S.cameraHelper.visible = false;
+      }
+      
+      // Reset camera planes only if clipping is turned OFF and HSR is ON
+      if (!S.s4ClipOn && S.s4HSROn) {
         S.camera.near = 0.1;
         S.camera.far = 200;
         S.camera.updateProjectionMatrix();
@@ -99,35 +156,64 @@ function attachDetail3Listeners() {
     };
   }
 
+  // Clipping: Near plane control
+  // Updates clipping window visualization; only applies clipping if both Clipping and HSR are ON
   const s4NearInput = document.getElementById('s4-near');
   if (s4NearInput) {
     s4NearInput.oninput = function() {
       S.s4NearVal = parseFloat(this.value);
       const nearVal = document.getElementById('s4-near-v');
       if (nearVal) nearVal.textContent = S.s4NearVal.toFixed(2);
-      S.camera.near = S.s4NearVal;
-      S.camera.updateProjectionMatrix();
-      if (S.cameraHelper) S.cameraHelper.update();
+      // Always update camera planes when Clipping is ON (for visualization)
+      // But only apply culling if HSR is also ON
+      if (S.s4ClipOn && S.s4HSROn) {
+        S.camera.near = S.s4NearVal;
+        S.camera.updateProjectionMatrix();
+        if (S.cameraHelper) S.cameraHelper.update();
+      }
     };
   }
 
+  // Clipping: Far plane control
+  // Updates clipping window visualization; only applies clipping if both Clipping and HSR are ON
   const s4FarInput = document.getElementById('s4-far');
   if (s4FarInput) {
     s4FarInput.oninput = function() {
       S.s4FarVal = parseFloat(this.value);
       const farVal = document.getElementById('s4-far-v');
       if (farVal) farVal.textContent = S.s4FarVal;
-      S.camera.far = S.s4FarVal;
-      S.camera.updateProjectionMatrix();
-      if (S.cameraHelper) S.cameraHelper.update();
+      // Always update camera planes when Clipping is ON (for visualization)
+      // But only apply culling if HSR is also ON
+      if (S.s4ClipOn && S.s4HSROn) {
+        S.camera.far = S.s4FarVal;
+        S.camera.updateProjectionMatrix();
+        if (S.cameraHelper) S.cameraHelper.update();
+      }
     };
   }
 
+  // ========== 3. HIDDEN SURFACE REMOVAL ==========
+  // On: Frustum culling active - objects outside clipping window (near/far planes) are cut/not rendered
+  // Off: All objects rendered - clipping is disabled, objects inside and outside clipping window both remain visible
   const s4HSRBtn = document.getElementById('s4-hsr');
   if (s4HSRBtn) {
     s4HSRBtn.onclick = function() {
       S.s4HSROn = !S.s4HSROn;
       this.classList.toggle('on', S.s4HSROn);
+      // When ON: Enable frustum culling to respect camera's near/far clipping planes
+      // When OFF: Disable culling AND reset to default clipping planes so all objects remain visible
+      setFrustumCulling(S.s4HSROn);
+      if (!S.s4HSROn) {
+        // Reset clipping to default when HSR is OFF
+        S.camera.near = 0.1;
+        S.camera.far = 200;
+        S.camera.updateProjectionMatrix();
+      }
+      // Always sync cameraHelper visibility based on Clipping state, regardless of HSR
+      if (S.cameraHelper) {
+        S.cameraHelper.visible = S.s4ClipOn;
+      }
+      // Also toggle material rendering side for proper hidden surface removal
       S.objectDefs.forEach(def => {
         if (!def.reprGroup) return;
         def.reprGroup.traverse(obj => {
@@ -137,16 +223,6 @@ function attachDetail3Listeners() {
           }
         });
       });
-    };
-  }
-
-  const s4ProjBtn = document.getElementById('s4-proj');
-  if (s4ProjBtn) {
-    s4ProjBtn.onclick = function() {
-      S.s4ProjOn = !S.s4ProjOn;
-      this.classList.toggle('on', S.s4ProjOn);
-      const projLabel = document.getElementById('proj-label');
-      if (projLabel) projLabel.style.display = S.s4ProjOn ? '' : 'none';
     };
   }
 
@@ -198,7 +274,9 @@ export function applySplitView(on) {
   document.getElementById('label-cam').style.display = on ? 'block' : 'none';
   S.cameraHelper.visible = false;
   S.resizeAll?.();
+  syncCameraProjection();
 }
+
 
 /**
  * Gets or creates an orthographic camera synchronized with the current viewport.
@@ -235,3 +313,6 @@ export function getOrthoCamera() {
   S.orthoCamera.rotation.copy(S.camera.rotation);
   return S.orthoCamera;
 }
+
+// Export helper functions for external use (e.g., initialization)
+export { setFrustumCulling, syncCameraProjection, setupCameraResizeHandler };
