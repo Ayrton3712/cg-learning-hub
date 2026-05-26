@@ -34,10 +34,11 @@ function setFrustumCulling(enabled) {
 function syncCameraProjection() {
   const wrap = document.getElementById('viewport-wrap');
   if (!wrap) return;
-  
-  const width = wrap.clientWidth;
+
+  // In split view the main camera renders in the right half only.
+  const width = S.splitActive ? Math.floor(wrap.clientWidth / 2) : wrap.clientWidth;
   const height = wrap.clientHeight;
-  
+
   if (width > 0 && height > 0 && S.camera) {
     const aspect = width / height;
     if (Math.abs(S.camera.aspect - aspect) > 0.001) {
@@ -274,7 +275,6 @@ export function applySplitView(on) {
   document.getElementById('label-cam').style.display = on ? 'block' : 'none';
   S.cameraHelper.visible = false;
   S.resizeAll?.();
-  syncCameraProjection();
 }
 
 
