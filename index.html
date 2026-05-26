@@ -500,6 +500,105 @@ body {
 }
 .obj-select:focus { border-color: var(--accent); }
 
+/* WELCOME MODAL */
+#welcome-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+#welcome-overlay.hidden { display: none; }
+#welcome-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px 36px;
+  max-width: 520px;
+  width: 90%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+}
+#welcome-box .wm-title {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  margin-bottom: 6px;
+}
+#welcome-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  margin-bottom: 14px;
+}
+#welcome-box p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 18px;
+}
+#welcome-box .wm-stages {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.wm-stage-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.wm-stage-row:last-child { border-bottom: none; }
+.wm-stage-num {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 12px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--badge-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.wm-stage-label { font-weight: 600; color: var(--text); flex: 1; }
+.wm-stage-desc { font-size: 12px; color: var(--muted); }
+#welcome-box .wm-hint {
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--accent-tint-lo);
+  border: 1px solid var(--accent-tint-border);
+  border-radius: 3px;
+  padding: 7px 10px;
+  margin-bottom: 22px;
+  line-height: 1.7;
+}
+#btn-get-started {
+  width: 100%;
+  padding: 10px;
+  background: var(--accent);
+  color: var(--btn-active-text);
+  border: none;
+  border-radius: 4px;
+  font-family: 'Syne', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+#btn-get-started:hover { opacity: 0.85; }
+
 /* THEME SWITCHER */
 .theme-switcher {
   margin-left: auto;
@@ -572,7 +671,56 @@ body {
   </div>
 </div>
 
+<div id="welcome-overlay">
+  <div id="welcome-box">
+    <div class="wm-title">CG Learning Hub</div>
+    <h2>3D Graphics Pipeline</h2>
+    <p>
+      An interactive simulator of the five stages of the
+      3D graphics pipeline. Enable each stage in order and
+      see exactly what it contributes.
+    </p>
+    <div class="wm-stages">
+      <div class="wm-stage-row">
+        <div class="wm-stage-num">1</div>
+        <span class="wm-stage-label">Object Representation</span>
+        <span class="wm-stage-desc">Boundary Representation, Point-sample, Space Partitioning, Sweep</span>
+      </div>
+      <div class="wm-stage-row">
+        <div class="wm-stage-num">2</div>
+        <span class="wm-stage-label">Modeling Transform</span>
+        <span class="wm-stage-desc">Translation, Rotation, Scaling</span>
+      </div>
+      <div class="wm-stage-row">
+        <div class="wm-stage-num">3</div>
+        <span class="wm-stage-label">Lighting</span>
+        <span class="wm-stage-desc">Ambient, Diffuse, Shadows</span>
+      </div>
+      <div class="wm-stage-row">
+        <div class="wm-stage-num">4</div>
+        <span class="wm-stage-label">Viewing Pipeline</span>
+        <span class="wm-stage-desc">Camera, Clipping, Projection</span>
+      </div>
+      <div class="wm-stage-row">
+        <div class="wm-stage-num">5</div>
+        <span class="wm-stage-label">Scan Conversion</span>
+        <span class="wm-stage-desc">Anti-aliasing, Rasterization, Pixel Grid</span>
+      </div>
+    </div>
+    <div class="wm-hint">
+      Orbit: left-drag || Zoom: scroll || Move: WASD<br>
+      Click an object to select it || Toggle stages in the right panel
+    </div>
+    <button id="btn-get-started">Get Started</button>
+  </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script type="module" src="./modules/pipeline_3d_main.js"></script>
+<script>
+  document.getElementById('btn-get-started').addEventListener('click', function() {
+    document.getElementById('welcome-overlay').classList.add('hidden');
+  });
+</script>
 </body>
 </html>
