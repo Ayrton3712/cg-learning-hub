@@ -1,4 +1,4 @@
-# `index.html` — Simple Documentation
+# `index.html`
 
 ## What this file is
 
