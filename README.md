@@ -20,7 +20,7 @@ An interactive, stage-by-stage visualization of the computer graphics pipeline b
 
 ## Overview
 
-Computer graphics relies on a series of well-defined steps — collectively called the **graphics pipeline** — to transform a 3D scene into a 2D image on screen. While these steps are fundamental to fields like video games, simulations, and visualization, their abstract nature makes them notoriously difficult to grasp.
+Computer graphics relies on a series of well-defined steps (collectively called the **graphics pipeline**) to transform a 3D scene into a 2D image on screen. While these steps are fundamental to fields like video games, simulations, and visualization, their abstract nature makes them notoriously difficult to grasp.
 
 This project provides an interactive 3D landscape scene where each stage of the pipeline can be toggled, inspected, and manipulated independently. By making each transformation visible and controllable, the simulator serves as a hands-on learning tool for anyone studying the fundamentals of computer graphics.
 
@@ -30,9 +30,9 @@ This project provides an interactive 3D landscape scene where each stage of the 
 
 The graphics pipeline presents several learning challenges:
 
-- **Abstract concepts** — Understanding how vertices and mathematical functions translate to pixels on screen requires mental models that are hard to build without visual feedback.
-- **Cognitive load** — Tracking multiple simultaneous transformations (modeling, viewing, projection, rasterization) makes it difficult to understand each step individually.
-- **Disconnected theory and practice** — Textbooks and lectures rarely allow experimentation with live parameters.
+- **Abstract concepts**. Understanding how vertices and mathematical functions translate to pixels on screen requires mental models that are hard to build without visual feedback.
+- **Cognitive load**. Tracking multiple simultaneous transformations (modeling, viewing, projection, rasterization) makes it difficult to understand each step individually.
+- **Disconnected theory and practice**. Textbooks and lectures rarely allow experimentation with live parameters.
 
 This simulator addresses all three by:
 
@@ -40,7 +40,7 @@ This simulator addresses all three by:
 - Allowing step-by-step analysis so learners can focus on one transformation at a time.
 - Supporting interactive manipulation of object position, scale, and camera perspective so users can immediately observe the effect of each change.
 
-A solid understanding of the graphics pipeline is also a foundation for more advanced topics — real-time rendering, shader programming, computer vision — making this a valuable starting point for further study.
+A solid understanding of the graphics pipeline is also a foundation for more advanced topics (real-time rendering, shader programming, computer vision) making this a valuable starting point for further study.
 
 ---
 
@@ -50,7 +50,7 @@ The simulator exposes five sequential stages. Each stage depends on the previous
 
 | # | Stage | Description |
 |---|-------|-------------|
-| 1 | **Object Representation** | Scene objects (tree, rock, cabin) rendered using different geometry representations (B-Rep, point cloud, voxel, wireframe). |
+| 1 | **Object Representation** | Scene objects (tree, rock, cabin) rendered using different geometry representations (Boundary Representation, Point-sample, Voxel (Space partitiong), Sweep). |
 | 2 | **Modeling Transform** | Applies per-object position, rotation, and scale transforms to place objects in world space. |
 | 3 | **Lighting** | Enables directional sunlight, ambient light, atmospheric fog, and shadow casting. |
 | 4 | **Viewing Pipeline** | Activates the camera/view transform. Includes a split-view god's-eye orthographic camera for comparison. |
@@ -60,14 +60,14 @@ The simulator exposes five sequential stages. Each stage depends on the previous
 
 ## Features
 
-- **Interactive stage toggling** — Enable or disable each pipeline stage independently; disabling a stage also cascades off all dependent stages.
-- **Object selection** — Click any scene object to inspect and modify its representation type, wireframe overlay, surface normals, point density, and voxel resolution.
-- **Split-view god's-eye camera** — Stage 4 opens a side-by-side orthographic overhead view showing the camera frustum in the scene.
-- **Orbit controls** — Drag to rotate, scroll to zoom on both the main and god's-eye viewports.
-- **WASD camera movement** — Move the perspective camera through the scene.
-- **Pixelation & scanline effects** — Stage 5 simulates low-resolution scan conversion with adjustable pixel size.
-- **Light and dark themes** — Toggle between light and dark UI themes.
-- **Live stats** — Displays active object count, vertex count, triangle count, and active stage count.
+- **Interactive stage toggling**. Enable or disable each pipeline stage independently; disabling a stage also cascades off all dependent stages.
+- **Object selection**. Click any scene object to inspect and modify its representation type, wireframe overlay, surface normals, point density, and voxel resolution.
+- **Split-view god's-eye camera**. Stage 4 opens a side-by-side orthographic overhead view showing the camera frustum in the scene.
+- **Orbit controls**. Drag to rotate, scroll to zoom on both the main and god's-eye viewports.
+- **WASD camera movement**. Move the perspective camera through the scene.
+- **Pixelation & scanline effects**. Stage 5 simulates low-resolution scan conversion with adjustable pixel size.
+- **Light and dark themes**. Toggle between light and dark UI themes.
+- **Live stats**. Displays active object count, vertex count, triangle count, and active stage count.
 
 ---
 
@@ -135,10 +135,9 @@ Then open `http://localhost:8080` in your browser.
 
 ## Technologies
 
-- **[Three.js](https://threejs.org/)** — 3D scene graph, geometry, materials, and WebGL rendering.
-- **Vanilla JavaScript (ES Modules)** — No build step required.
-- **HTML5 Canvas / WebGL** — Dual-canvas rendering (main perspective + god's-eye orthographic).
-
+- **[Three.js](https://threejs.org/)**. 3D scene graph, geometry, materials, and WebGL rendering.
+- **Vanilla JavaScript (ES Modules)**. No build step required.
+- **HTML5 Canvas / WebGL**. Dual-canvas rendering (main perspective + god's-eye orthographic).
 ---
 
 ## Context
