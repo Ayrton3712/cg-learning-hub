@@ -1,9 +1,9 @@
-// Stage 1 — Object Representation
-// Geometry factories, per-object representation builders, selection, and the Stage 1 detail panel.
+// Stage 1 - Object Representation
+// Geometry factories, per-object representation builders, selection, and the Stage 1 detail panel
 
 import { S, getEmissiveColor, getWireColor } from './pipeline_3d_state.js';
 
-// ─── GEOMETRY FACTORY (used by points / voxel / sweep as base approximation) ─
+// GEOMETRY FACTORY (used by points / voxel / sweep as base approximation)
 export function makeBaseGeo(def) {
   switch (def.geoType) {
     case 'tree':  return new THREE.ConeGeometry(0.55, 1.8, 8);
@@ -22,7 +22,7 @@ export function disposeGroup(g) {
   });
 }
 
-// ─── BREP PROP BUILDERS ───────────────────────────────────────────────────────
+// BREP PROP BUILDERS
 function buildTreeMeshes(group, def, useLit, useGray) {
   function mat(color, grayColor, roughness = 0.85) {
     const c = useGray ? grayColor : color;
@@ -87,7 +87,7 @@ function buildCabinMeshes(group, def, useLit, useGray) {
   def.mesh = body;
 }
 
-// ─── REPRESENTATION BUILDER ──────────────────────────────────────────────────
+// REPRESENTATION BUILDER 
 export function buildRepr(def) {
   if (def.reprGroup) {
     S.scene.remove(def.reprGroup);
@@ -121,7 +121,7 @@ export function buildRepr(def) {
 
       if (def.wireframeOn) {
         brepMeshes.forEach(m => {
-          // Push mesh faces back slightly so wireframe lines sit on top.
+          // Push mesh faces back slightly so wireframe lines sit on top
           m.material.polygonOffset = true;
           m.material.polygonOffsetFactor = 1;
           m.material.polygonOffsetUnits = 1;
@@ -165,8 +165,7 @@ export function buildRepr(def) {
       break;
     }
     case 'points': {
-      // Build into a temp group using the same composite builders as BRep so
-      // multi-part objects (trunk+foliage, body+roof) are fully sampled.
+      // Build into a temp group using the same composite builders as BRep so multi-part objects (trunk+foliage, body+roof) are fully sampled
       const tmpGroup = new THREE.Group();
       if (def.geoType === 'tree')       buildTreeMeshes(tmpGroup, def, false, useGray);
       else if (def.geoType === 'rock')  buildRockMesh(tmpGroup, def, false, useGray);
@@ -199,13 +198,13 @@ export function buildRepr(def) {
       break;
     }
     case 'voxel': {
-      // Build actual composite geometry so tree/cabin use all their parts.
+      // Build actual composite geometry so tree/cabin use all their parts
       const tmpGroup = new THREE.Group();
       if (def.geoType === 'tree')       buildTreeMeshes(tmpGroup, def, false, useGray);
       else if (def.geoType === 'rock')  buildRockMesh(tmpGroup, def, false, useGray);
       else if (def.geoType === 'cabin') buildCabinMeshes(tmpGroup, def, false, useGray);
 
-      // Sample vertices + face centers from every mesh part in group-local space.
+      // Sample vertices + face centers from every mesh part in group-local space
       const samples = [];
       const _v = new THREE.Vector3();
       tmpGroup.traverse(child => {
@@ -233,8 +232,7 @@ export function buildRepr(def) {
       const res = def.voxelRes;
       const sz = bbox.getSize(new THREE.Vector3());
       const dx = sz.x / res, dy = sz.y / res, dz = sz.z / res;
-      // Expand the acceptance radius slightly beyond the exact half-cell so
-      // surface triangles crossing a cell boundary still activate that cell.
+      // Expand the acceptance radius slightly beyond the exact half-cell so surface triangles crossing a cell boundary still activate that cell.
       const rx = dx * 0.55, ry = dy * 0.55, rz = dz * 0.55;
 
       for (let xi = 0; xi < res; xi++) {
@@ -261,7 +259,7 @@ export function buildRepr(def) {
       break;
     }
     case 'sweep': {
-      // Cabin is blocked upstream. Tree and rock use per-object profiles.
+      // Cabin is blocked upstream. Tree and rock use per-object profiles
       const sweepAngle = THREE.MathUtils.degToRad(def.sweepAngle);
 
       function addSweep(pts, setAsMesh) {
@@ -275,21 +273,21 @@ export function buildRepr(def) {
       }
 
       if (def.geoType === 'tree') {
-        // Trunk: closed tapered cylinder — cap points at x=0 close top and bottom.
+        // Trunk: closed tapered cylinder, cap points at x=0 close top and bottom
         addSweep([
           new THREE.Vector2(0,    0),    // bottom cap centre
           new THREE.Vector2(0.14, 0),   // bottom edge
           new THREE.Vector2(0.08, 0.7), // top edge
           new THREE.Vector2(0,    0.7), // top cap centre
         ], true);
-        // Foliage: cone with closed base — apex at x=0 closes the top naturally.
+        // Foliage: cone with closed base, apex at x=0 closes the top naturally
         addSweep([
           new THREE.Vector2(0,    0.7), // bottom cap centre
           new THREE.Vector2(0.55, 0.7), // base edge
           new THREE.Vector2(0,    2.2), // apex
         ], false);
       } else {
-        // Rock: semicircle profile, radius 0.52, centred at y=0.3
+        // Rock: semicircle profile, radius 0.52, centered at y=0.3
         const pts = [];
         for (let i = 0; i <= 16; i++) {
           const a = Math.PI * (i / 16);
@@ -307,7 +305,7 @@ export function buildRepr(def) {
   return group;
 }
 
-// ─── SELECTION ────────────────────────────────────────────────────────────────
+// SELECTION
 export function selectObject(def) {
   clearSelection();
   if (!def) return;
@@ -322,7 +320,7 @@ export function selectObject(def) {
         toOutline.push(obj);
       }
     });
-    // Stages 1-2 use MeshBasicMaterial (no emissive), so add an edge outline instead.
+    // Stages 1-2 use MeshBasicMaterial (no emissive), so add an edge outline instead
     toOutline.forEach(mesh => {
       mesh.updateMatrix();
       const outline = new THREE.LineSegments(
@@ -353,7 +351,7 @@ export function clearSelection() {
   S.updateDetailPanels?.();
 }
 
-// ─── DETAIL PANEL ────────────────────────────────────────────────────────────
+// DETAIL PANEL 
 export function buildDetail0() {
   document.getElementById('detail-0').innerHTML = `
     <div class="detail-section">
