@@ -1,11 +1,10 @@
-// Stage 2 — Modeling Transformation
-// Handles the per-object transform sliders, 4×4 matrix display,
-// and the Stage 2 detail panel.
+// Stage 2 - Modeling Transformation
+// Handles the per-object transform sliders, 4×4 matrix display, and the Stage 2 detail panel.
 
 import { S } from './pipeline_3d_state.js';
 import { terrainHeight } from './pipeline_3d_landscape.js';
 
-// ─── DETAIL PANEL ────────────────────────────────────────────────────────────
+// DETAIL PANEL 
 export function buildDetail1() {
   document.getElementById('detail-1').innerHTML = `
     <div class="detail-section">
@@ -39,7 +38,7 @@ export function buildDetail1() {
     </div>
   `;
 
-  // Build 4×4 matrix cells
+  // Build 4x4 matrix cells
   const mg = document.getElementById('matrix-grid');
   for (let i = 0; i < 16; i++) {
     const cell = document.createElement('div');
@@ -67,7 +66,7 @@ export function buildDetail1() {
   });
 }
 
-// ─── HELPERS ─────────────────────────────────────────────────────────────────
+// HELPERS 
 function defaultPos(idx) {
   return [
     new THREE.Vector3(2,  terrainHeight(2, 1),   1),   // Tree
@@ -79,7 +78,7 @@ function defaultPos(idx) {
 function defaultRot(idx) {
   return [
     new THREE.Euler(0,  0.3,  0),   // Tree
-    new THREE.Euler(0,  0.8,  0.1), // Rock — slight tilt
+    new THREE.Euler(0,  0.8,  0.1), // Rock
     new THREE.Euler(0, -0.5,  0),   // Cabin
   ][idx];
 }
