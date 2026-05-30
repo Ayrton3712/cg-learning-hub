@@ -1,7 +1,7 @@
 // Stage 1 - Object Representation
 // Geometry factories, per-object representation builders, selection, and the Stage 1 detail panel
 
-import { S, getEmissiveColor, getWireColor } from './pipeline_3d_state.js';
+import { S, getEmissiveColor } from './pipeline_3d_state.js';
 
 // GEOMETRY FACTORY (used by points / voxel / sweep as base approximation)
 export function makeBaseGeo(def) {
@@ -116,52 +116,6 @@ export function buildRepr(def) {
       else if (def.geoType === 'rock')  buildRockMesh(group, def, useLit, useGray);
       else if (def.geoType === 'cabin') buildCabinMeshes(group, def, useLit, useGray);
 
-      const brepMeshes = [];
-      group.traverse(o => { if (o.isMesh) brepMeshes.push(o); });
-
-      if (def.wireframeOn) {
-        brepMeshes.forEach(m => {
-          // Push mesh faces back slightly so wireframe lines sit on top
-          m.material.polygonOffset = true;
-          m.material.polygonOffsetFactor = 1;
-          m.material.polygonOffsetUnits = 1;
-          m.updateMatrix();
-          const wire = new THREE.LineSegments(
-            new THREE.EdgesGeometry(m.geometry),
-            new THREE.LineBasicMaterial({ color: getWireColor() })
-          );
-          wire.matrix.copy(m.matrix);
-          wire.matrixAutoUpdate = false;
-          group.add(wire);
-        });
-      }
-
-      if (def.normalsOn) {
-        brepMeshes.forEach(m => {
-          m.updateMatrix();
-          const geo = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry;
-          if (!geo.attributes.normal) geo.computeVertexNormals();
-          const pos = geo.attributes.position;
-          const nrm = geo.attributes.normal;
-          const arrowLen = 0.18;
-          const linePositions = [];
-          for (let i = 0; i < pos.count; i += 3) {
-            const cx = (pos.getX(i) + pos.getX(i+1) + pos.getX(i+2)) / 3;
-            const cy = (pos.getY(i) + pos.getY(i+1) + pos.getY(i+2)) / 3;
-            const cz = (pos.getZ(i) + pos.getZ(i+1) + pos.getZ(i+2)) / 3;
-            const nx = (nrm.getX(i) + nrm.getX(i+1) + nrm.getX(i+2)) / 3;
-            const ny = (nrm.getY(i) + nrm.getY(i+1) + nrm.getY(i+2)) / 3;
-            const nz = (nrm.getZ(i) + nrm.getZ(i+1) + nrm.getZ(i+2)) / 3;
-            linePositions.push(cx, cy, cz, cx + nx * arrowLen, cy + ny * arrowLen, cz + nz * arrowLen);
-          }
-          const normGeo = new THREE.BufferGeometry();
-          normGeo.setAttribute('position', new THREE.Float32BufferAttribute(linePositions, 3));
-          const normLines = new THREE.LineSegments(normGeo, new THREE.LineBasicMaterial({ color: 0x00cc66 }));
-          normLines.matrix.copy(m.matrix);
-          normLines.matrixAutoUpdate = false;
-          group.add(normLines);
-        });
-      }
       break;
     }
     case 'points': {
@@ -375,8 +329,6 @@ export function buildDetail0() {
       <div id="repr-warn" class="warn-text" style="display:none"></div>
     </div>
     <div id="repr-controls-brep" class="detail-section">
-      <div class="detail-toggle-row"><span>Wireframe</span><button class="mini-toggle" id="wf-toggle"></button></div>
-      <div class="detail-toggle-row"><span>Face Normals</span><button class="mini-toggle" id="fn-toggle"></button></div>
       <div class="detail-label">Vertices</div>
       <div id="vertex-list">Select an object</div>
     </div>
@@ -414,22 +366,6 @@ export function buildDetail0() {
       selectObject(S.selectedObj);
       updateDetail0();
     });
-  });
-
-  document.getElementById('wf-toggle').addEventListener('click', function() {
-    if (!S.selectedObj) return;
-    S.selectedObj.wireframeOn = !S.selectedObj.wireframeOn;
-    this.classList.toggle('on', S.selectedObj.wireframeOn);
-    buildRepr(S.selectedObj);
-    selectObject(S.selectedObj);
-  });
-
-  document.getElementById('fn-toggle').addEventListener('click', function() {
-    if (!S.selectedObj) return;
-    S.selectedObj.normalsOn = !S.selectedObj.normalsOn;
-    this.classList.toggle('on', S.selectedObj.normalsOn);
-    buildRepr(S.selectedObj);
-    selectObject(S.selectedObj);
   });
 
   document.getElementById('pt-size').addEventListener('input', function() {
@@ -475,9 +411,6 @@ export function updateDetail0() {
     const el = document.getElementById(`repr-controls-${r}`);
     if (el) el.style.display = S.selectedObj.repr === r ? '' : 'none';
   });
-
-  document.getElementById('wf-toggle')?.classList.toggle('on', S.selectedObj.wireframeOn);
-  document.getElementById('fn-toggle')?.classList.toggle('on', S.selectedObj.normalsOn);
 
   if (S.selectedObj.repr === 'brep' && S.selectedObj.mesh) {
     const pos = S.selectedObj.mesh.geometry.attributes.position;

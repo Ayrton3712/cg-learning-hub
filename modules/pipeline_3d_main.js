@@ -60,7 +60,6 @@ S.objectDefs = [
     geoType: 'tree',
     repr: 'brep', reprGroup: null, mesh: null,
     pointSize: 0.05, pointDensity: 200, voxelRes: 5, sweepAngle: 360,
-    wireframeOn: false, normalsOn: false,
   },
   {
     name: 'Rock',
@@ -71,7 +70,6 @@ S.objectDefs = [
     geoType: 'rock',
     repr: 'brep', reprGroup: null, mesh: null,
     pointSize: 0.05, pointDensity: 150, voxelRes: 4, sweepAngle: 360,
-    wireframeOn: false, normalsOn: false,
   },
   {
     name: 'Cabin',
@@ -82,7 +80,6 @@ S.objectDefs = [
     geoType: 'cabin',
     repr: 'brep', reprGroup: null, mesh: null,
     pointSize: 0.05, pointDensity: 180, voxelRes: 4, sweepAngle: 360,
-    wireframeOn: false, normalsOn: false,
   },
 ];
 
