@@ -1,4 +1,4 @@
-// Main entry point — 3D Graphics Pipeline Simulator (Landscape Scene)
+// Main entry point
 // Sets up Three.js, the landscape scene, orbit controls, stage UI, and the render loop.
 
 import { S, THEMES } from './pipeline_3d_state.js';
@@ -9,7 +9,7 @@ import { buildDetail2 } from './pipeline_3d_stage3.js';
 import { buildDetail3, applySplitView, getOrthoCamera } from './pipeline_3d_stage4.js';
 import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset, drawPixelGridOverlay, getStage5RenderPixelSize } from './pipeline_3d_stage5.js';
 
-// ─── THREE.JS SETUP ──────────────────────────────────────────────────────────
+// THREE.JS SETUP
 S.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('main-canvas'), antialias: true });
 S.renderer.shadowMap.enabled = false;
 S.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -41,15 +41,15 @@ S.ambientLight = new THREE.AmbientLight(0xfff0e0, 0.35);
 S.ambientLight.visible = false;
 S.scene.add(S.ambientLight);
 
-// ─── ORBIT STATE ─────────────────────────────────────────────────────────────
+// ORBIT STATE
 S.orbit.target    = new THREE.Vector3(0, 0.5, 0);
 S.godOrbit.target = new THREE.Vector3(0, 0, 0);
 
-// ─── LANDSCAPE INIT ──────────────────────────────────────────────────────────
-// Creates terrain, skybox, sun sphere, and directional light — all on S.*
+// LANDSCAPE INIT
+// Creates terrain, skybox, sun sphere, and directional light, all on S
 initLandscape();
 
-// ─── SCENE OBJECTS (selectable props) ────────────────────────────────────────
+// SCENE OBJECTS
 S.objectDefs = [
   {
     name: 'Tree',
@@ -88,7 +88,7 @@ S.objectDefs = [
 
 S.objectDefs.forEach(def => buildRepr(def));
 
-// ─── ORBIT CONTROLS ──────────────────────────────────────────────────────────
+// ORBIT CONTROLS
 function updateCameraFromOrbit(orb, cam) {
   const phiRad   = THREE.MathUtils.degToRad(orb.phi);
   const thetaRad = THREE.MathUtils.degToRad(orb.theta);
@@ -102,7 +102,7 @@ function updateCameraFromOrbit(orb, cam) {
 
 updateCameraFromOrbit(S.orbit, S.camera);
 
-// ─── KEYBOARD STATE (for camera movement) ────────────────────────────────────
+// KEYBOARD STATE (for camera movement)
 const keyboardState = {
   w: false, a: false, s: false, d: false,
   moveSpeed: 0.1, // units per frame
@@ -124,7 +124,7 @@ document.addEventListener('keyup', e => {
   if (key === 'd') keyboardState.d = false;
 });
 
-// ─── CANVAS EVENTS ───────────────────────────────────────────────────────────
+// CANVAS EVENTS
 const mainCanvas = document.getElementById('main-canvas');
 const godCanvas  = document.getElementById('god-eye-canvas');
 const raycaster  = new THREE.Raycaster();
@@ -228,7 +228,7 @@ godCanvas.addEventListener('wheel', e => {
   updateCameraFromOrbit(S.godOrbit, S.godCamera);
 }, { passive: false });
 
-// ─── RESIZE ──────────────────────────────────────────────────────────────────
+// RESIZE
 function resizeAll() {
   const wrap = document.getElementById('viewport-wrap');
   const W = wrap.clientWidth;
@@ -268,7 +268,7 @@ function resizeAll() {
 S.resizeAll = resizeAll;
 window.addEventListener('resize', resizeAll);
 
-// ─── STAGE UI ────────────────────────────────────────────────────────────────
+// STAGE UI
 const stageData = [
   { num: 1, label: 'Object Representation' },
   { num: 2, label: 'Modeling Transform' },
@@ -389,7 +389,7 @@ function updateDetailPanels() {
 }
 S.updateDetailPanels = updateDetailPanels;
 
-// ─── STATS ───────────────────────────────────────────────────────────────────
+// STATS
 function updateStats() {
   let totalVerts = 0, totalTris = 0, objCount = 0;
 
@@ -412,7 +412,7 @@ function updateStats() {
 }
 S.updateStats = updateStats;
 
-// ─── THEME ───────────────────────────────────────────────────────────────────
+// THEME
 function setTheme(name) {
   if (name === S.currentTheme) return;
   S.currentTheme = name;
@@ -422,7 +422,7 @@ function setTheme(name) {
 
   S.scene.background = new THREE.Color(t.sceneBg);
 
-  // gridHelper is null in the landscape scene — null-check guards the original path
+  // gridHelper is null in the landscape scene, null-check guards the original path
   if (S.gridHelper) {
     if (Array.isArray(S.gridHelper.material)) {
       S.gridHelper.material[0].color.setHex(t.gridMain);
@@ -441,7 +441,7 @@ function setTheme(name) {
 document.getElementById('btn-light').addEventListener('click', () => setTheme('light'));
 document.getElementById('btn-dark').addEventListener('click', () => setTheme('dark'));
 
-// ─── RENDER LOOP ─────────────────────────────────────────────────────────────
+// RENDER LOOP
 function render() {
   requestAnimationFrame(render);
 
@@ -512,7 +512,7 @@ function render() {
   updateStats();
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// INIT
 buildDetail0();
 buildDetail1();
 buildDetail2();
