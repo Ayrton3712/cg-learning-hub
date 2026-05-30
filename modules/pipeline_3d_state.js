@@ -1,5 +1,5 @@
-// Shared mutable state and theme definitions — imported by all pipeline modules.
-// THREE is a CDN global, available to all modules since the CDN script loads before modules execute.
+// Shared mutable state and theme definitions, imported by all pipeline modules.
+// THREE is a CDN global, available to all modules since the CDN script loads before modules execute
 
 export const THEMES = {
   light: { sceneBg:0xc8d8f0, gridMain:0x9aa4c8, gridSub:0xc4cce0, wireColor:0x227733, emissive:0x001a44 },
@@ -7,7 +7,7 @@ export const THEMES = {
 };
 
 export const S = {
-  // Three.js objects — populated by pipeline_3d_main.js on startup
+  // Three.js objects. Populated by pipeline_3d_main.js on startup
   scene: null, camera: null, renderer: null,
   godCamera: null, godRenderer: null,
   gridHelper: null, cameraHelper: null,
@@ -23,14 +23,14 @@ export const S = {
   terrain: null,
   skybox: null,
 
-  // Pipeline stage on/off flags [stage1..stage5]
+  // Pipeline stage on/off flags [stage1...stage5]
   stages: [false, false, false, false, false],
   openDetail: -1,        // which detail panel is expanded (-1 = none)
   selectedObj: null,     // currently selected objectDef
   splitActive: false,    // true when Stage 4 split view is active
   currentTheme: 'light',
 
-  // Orbit state — target Vectors set by main after THREE is available
+  // Orbit state. Target Vectors set by main after THREE is available
   orbit: {
     dragging: false, button: -1, lastX: 0, lastY: 0,
     theta: 35, phi: 28, radius: 15,
@@ -56,7 +56,7 @@ export const S = {
   // Stage 5 state
   pixelSize: 4, s5AAOn: false, s5ScanlineOn: false, s5GridOn: false, scanlineY: 0,
 
-  // Cross-module callbacks — set by main before any stage interaction occurs
+  // Cross-module callbacks. Set by main before any stage interaction occurs
   updateDetailPanels: null,
   updateStats: null,
   resizeAll: null,
