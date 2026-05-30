@@ -1,6 +1,5 @@
-// Stage 5 — Scan Conversion
-// Handles pixelation, AA, raster sweep, pixel grid, zoom inset,
-// and the Stage 5 detail panel.
+// Stage 5 - Scan Conversion
+// Handles pixelation, Anti-Aliasing, pixel grid, zoom inset, and the Stage 5 detail panel
 
 import { S } from './pipeline_3d_state.js';
 
