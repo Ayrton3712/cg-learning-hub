@@ -1,6 +1,5 @@
-// Stage 3 — Lighting
-// Handles ambient/diffuse/specular/shadow toggles, sun azimuth/elevation/intensity sliders,
-// and the Stage 3 detail panel.
+// Stage 3 - Lighting
+// Handles ambient/diffuse/specular/shadow toggles, sun azimuth/elevation/intensity sliders, and the Stage 3 detail panel
 
 import { S } from './pipeline_3d_state.js';
 import { updateSunPosition } from './pipeline_3d_landscape.js';
