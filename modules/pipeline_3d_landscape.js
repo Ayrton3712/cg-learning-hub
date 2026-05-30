@@ -1,17 +1,17 @@
-// Landscape module — procedural terrain, gradient skybox, sun directional light.
-// None of these are pipeline "objects" — they form the environment.
+// Landscape module. Procedural terrain, gradient skybox, sun directional light
+// None of these are pipeline "objects"; they form the environment
 
 import { S } from './pipeline_3d_state.js';
 
-// ─── TERRAIN HEIGHT ───────────────────────────────────────────────────────────
-// Pure function exported so other modules can sample ground level at any (x, z).
+// TERRAIN HEIGHT 
+// Pure function exported so other modules can sample ground level at any (x, z)
 export function terrainHeight(x, z) {
   return Math.sin(x * 0.3) * Math.cos(z * 0.3) * 1.5
        + Math.sin(x * 0.7 + 1.0) * 0.6
        + Math.cos(z * 0.5 - 0.5) * 0.4;
 }
 
-// ─── TERRAIN GEOMETRY ────────────────────────────────────────────────────────
+// TERRAIN GEOMETRY 
 function buildTerrainGeometry() {
   const geo = new THREE.PlaneGeometry(30, 30, 60, 60);
   geo.rotateX(-Math.PI / 2);
@@ -26,7 +26,7 @@ function buildTerrainGeometry() {
     const y = terrainHeight(x, z);
     pos.setY(i, y);
 
-    // Three-stop color gradient: dark-green → grass-green → tan/rocky
+    // Three-stop color gradient: dark-green -> grass-green -> tan/rocky
     const t = Math.max(0, Math.min(1, (y - minH) / (maxH - minH)));
     let r, g, b;
     if (t < 0.5) {
@@ -48,8 +48,8 @@ function buildTerrainGeometry() {
   return geo;
 }
 
-// Swap terrain material between lit (Stage 3 on) and unlit (Stage 3 off).
-// Avoids rebuilding the geometry on every stage toggle.
+// Swap terrain material between lit (Stage 3 on) and unlit (Stage 3 off)
+// Avoids rebuilding the geometry on every stage toggle
 export function applyTerrainMaterial(useLit) {
   if (!S.terrain) return;
   S.terrain.material.dispose();
@@ -59,7 +59,7 @@ export function applyTerrainMaterial(useLit) {
   S.terrain.receiveShadow = useLit;
 }
 
-// ─── SUN POSITION ────────────────────────────────────────────────────────────
+// SUN POSITION 
 export function updateSunPosition() {
   const phi   = THREE.MathUtils.degToRad(S.sunElevation);
   const theta = THREE.MathUtils.degToRad(S.sunAzimuth);
@@ -76,16 +76,16 @@ export function updateSunPosition() {
   }
 }
 
-// ─── INIT ────────────────────────────────────────────────────────────────────
+// INIT 
 export function initLandscape() {
-  // Terrain — starts with BasicMaterial (Stage 3 is off at boot)
+  // Terrain. Starts with BasicMaterial (Stage 3 is off at boot)
   const terrainGeo = buildTerrainGeometry();
   S.terrain = new THREE.Mesh(terrainGeo, new THREE.MeshBasicMaterial({ vertexColors: true }));
   S.terrain.receiveShadow = false;
   S.terrain.userData.isTerrain = true;
   S.scene.add(S.terrain);
 
-  // Gradient skybox — inverted sphere with GLSL gradient
+  // Gradient skybox. Inverted sphere with GLSL gradient
   const skyGeo = new THREE.SphereGeometry(80, 32, 16);
   S.skybox = new THREE.Mesh(skyGeo, new THREE.ShaderMaterial({
     side: THREE.BackSide,
