@@ -1,10 +1,9 @@
-// Stage 4 — Viewing Pipeline
-// Handles viewing transform, clipping, hidden surface removal, projection toggles,
-// camera controls, split-view, and the Stage 4 detail panel.
+// Stage 4 - Viewing Pipeline
+// Handles viewing transform, clipping, hidden surface removal, projection toggles, camera controls, split-view, and the Stage 4 detail panel.
 
 import { S } from './pipeline_3d_state.js';
 
-// ─── FRUSTUM CULLING & CAMERA PROJECTION HELPERS ─────────────────────────────
+// FRUSTUM CULLING & CAMERA PROJECTION HELPERS 
 
 /**
  * Toggle frustum culling on all meshes in the scene.
