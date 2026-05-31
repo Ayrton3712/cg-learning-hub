@@ -61,7 +61,7 @@ The simulator exposes five sequential stages. Each stage depends on the previous
 ## Features
 
 - **Interactive stage toggling**. Enable or disable each pipeline stage independently; disabling a stage also cascades off all dependent stages.
-- **Object selection**. Click any scene object to inspect and modify its representation type, wireframe overlay, surface normals, point density, and voxel resolution.
+- **Object selection**. Click any scene object to inspect and modify its representation type.
 - **Split-view god's-eye camera**. Stage 4 opens a side-by-side orthographic overhead view showing the camera frustum in the scene.
 - **Orbit controls**. Drag to rotate, scroll to zoom on both the main and god's-eye viewports.
 - **WASD camera movement**. Move the perspective camera through the scene.
