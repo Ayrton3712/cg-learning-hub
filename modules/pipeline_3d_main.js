@@ -7,7 +7,7 @@ import { buildRepr, buildDetail0, updateDetail0, selectObject, clearSelection } 
 import { buildDetail1, updateDetail1 } from './pipeline_3d_stage2.js';
 import { buildDetail2 } from './pipeline_3d_stage3.js';
 import { buildDetail3, applySplitView, getOrthoCamera } from './pipeline_3d_stage4.js';
-import { buildDetail4, applyPixelation, updateEffRes, drawZoomInset, drawPixelGridOverlay, getStage5RenderPixelSize } from './pipeline_3d_stage5.js';
+import { buildDetail4, applyPixelation, updateEffRes, drawPixelGridOverlay, getStage5RenderPixelSize } from './pipeline_3d_stage5.js';
 
 // THREE.JS SETUP
 S.renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('main-canvas'), antialias: true });
@@ -478,11 +478,6 @@ function render() {
 
   if (S.cameraHelper && S.stages[3]) S.cameraHelper.update();
 
-  if (S.stages[4] && S.s5ScanlineOn) {
-    const zoomCanvas = document.getElementById('zoom-canvas');
-    S.scanlineY = (S.scanlineY + 0.75) % zoomCanvas.height;
-  }
-
   if (S.stages[4]) {
     const wrap = document.getElementById('viewport-wrap');
     const W = wrap.clientWidth * (S.splitActive ? 0.5 : 1);
@@ -509,7 +504,6 @@ function render() {
   }
 
   if (S.stages[4]) {
-    drawZoomInset();
     drawPixelGridOverlay();
   }
 

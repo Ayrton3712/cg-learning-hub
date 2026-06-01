@@ -19,7 +19,6 @@ export function buildDetail4() {
     <div class="detail-section">
       <div class="detail-label">Options</div>
       <div class="detail-toggle-row"><span>Anti-aliasing</span><button class="mini-toggle" id="s5-aa"></button></div>
-      <div class="detail-toggle-row"><span>Raster Sweep</span><button class="mini-toggle" id="s5-scan"></button></div>
       <div class="detail-toggle-row"><span>Pixel Grid</span><button class="mini-toggle" id="s5-grid"></button></div>
     </div>
   `;
@@ -36,44 +35,14 @@ export function buildDetail4() {
     updateEffRes();
   });
 
-  document.getElementById('s5-scan').addEventListener('click', function() {
-    S.s5ScanlineOn = !S.s5ScanlineOn;
-    this.classList.toggle('on', S.s5ScanlineOn);
-    if (S.s5ScanlineOn) S.scanlineY = 0;
-  });
-
   document.getElementById('s5-grid').addEventListener('click', function() {
     S.s5GridOn = !S.s5GridOn;
     this.classList.toggle('on', S.s5GridOn);
   });
 
-  // Zoom inset drag
-  const zoomInset = document.getElementById('zoom-inset');
-  let zoomDragging = false, zoomDragOX = 0, zoomDragOY = 0;
-
-  zoomInset.addEventListener('mousedown', e => {
-    zoomDragging = true;
-    zoomDragOX = e.clientX - zoomInset.offsetLeft;
-    zoomDragOY = e.clientY - zoomInset.offsetTop;
-    e.stopPropagation();
-  });
-  document.addEventListener('mousemove', e => {
-    if (!zoomDragging) return;
-    const wrap = document.getElementById('viewport-wrap');
-    const rect = wrap.getBoundingClientRect();
-    let nx = e.clientX - rect.left - zoomDragOX;
-    let ny = e.clientY - rect.top - zoomDragOY;
-    nx = Math.max(0, Math.min(wrap.clientWidth - zoomInset.offsetWidth, nx));
-    ny = Math.max(0, Math.min(wrap.clientHeight - zoomInset.offsetHeight, ny));
-    zoomInset.style.left = nx + 'px';
-    zoomInset.style.top = ny + 'px';
-    zoomInset.style.bottom = 'auto';
-  });
-  document.addEventListener('mouseup', () => { zoomDragging = false; });
 }
 
 export function applyPixelation(on) {
-  document.getElementById('zoom-inset').style.display = on ? 'block' : 'none';
   document.getElementById('pixel-grid-overlay').style.display = on && S.s5GridOn ? 'block' : 'none';
   if (!on) {
     document.getElementById('main-canvas').style.imageRendering = '';
@@ -121,31 +90,6 @@ function strokePixelGrid(ctx, w, h, cellW, cellH) {
   ctx.restore();
 }
 
-function drawRasterSweep(ctx, w, h) {
-  const y = Math.floor(S.scanlineY % h);
-  const rowHeight = Math.max(2, Math.min(12, S.pixelSize));
-  const scanlineColor = getComputedStyle(document.documentElement)
-    .getPropertyValue('--accent-scanline')
-    .trim() || 'rgba(0,112,192,0.75)';
-
-  ctx.save();
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.fillRect(0, Math.min(h, y + rowHeight), w, Math.max(0, h - y - rowHeight));
-
-  ctx.fillStyle = scanlineColor;
-  ctx.globalAlpha = 0.18;
-  ctx.fillRect(0, y, w, rowHeight);
-
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = scanlineColor;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, y + 0.5);
-  ctx.lineTo(w, y + 0.5);
-  ctx.stroke();
-  ctx.restore();
-}
-
 export function drawPixelGridOverlay() {
   const overlay = document.getElementById('pixel-grid-overlay');
   const mainCanvas = document.getElementById('main-canvas');
@@ -180,31 +124,3 @@ export function drawPixelGridOverlay() {
   strokePixelGrid(ctx, cssW, cssH, cssW / effW, cssH / effH);
 }
 
-export function drawZoomInset() {
-  if (!S.stages[4]) return;
-  const mainCanvas = document.getElementById('main-canvas');
-  const zoomCanvas = document.getElementById('zoom-canvas');
-  const zoomCtx = zoomCanvas.getContext('2d');
-  const w = zoomCanvas.width;
-  const h = zoomCanvas.height;
-  const srcW = mainCanvas.width;
-  const srcH = mainCanvas.height;
-  const cropW = Math.floor(srcW / 6);
-  const cropH = Math.floor(srcH / 6);
-  const cropX = Math.floor((srcW - cropW) / 2);
-  const cropY = Math.floor((srcH - cropH) / 2);
-
-  zoomCtx.clearRect(0, 0, w, h);
-  zoomCtx.imageSmoothingEnabled = S.s5AAOn;
-  zoomCtx.imageSmoothingQuality = S.s5AAOn ? 'high' : 'low';
-  zoomCtx.drawImage(mainCanvas, cropX, cropY, cropW, cropH, 0, 0, w, h);
-
-  if (S.s5ScanlineOn) drawRasterSweep(zoomCtx, w, h);
-
-  if (S.s5GridOn) {
-    const dpr = window.devicePixelRatio || 1;
-    const logicalCropW = Math.max(1, cropW / dpr);
-    const logicalCropH = Math.max(1, cropH / dpr);
-    strokePixelGrid(zoomCtx, w, h, w / logicalCropW, h / logicalCropH);
-  }
-}
