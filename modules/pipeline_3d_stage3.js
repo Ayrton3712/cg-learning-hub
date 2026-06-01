@@ -5,6 +5,31 @@
 import { S } from './pipeline_3d_state.js';
 import { updateSunPosition } from './pipeline_3d_landscape.js';
 
+// Re-apply every shadow-related property. Required when toggling shadows at
+// runtime because Three.js caches material programs by the shadow-enabled state
+// at first compile; just flipping renderer.shadowMap.enabled invalidates which
+// shader chunks are needed but the cached program stays in place, so the new
+// shadow pass silently no-ops until something forces a recompile. Marking each
+// material's needsUpdate invalidates the cache and lets the renderer rebuild
+// the program with the correct shadow chunks on the next frame.
+function refreshShadows() {
+  if (!S.renderer) return;
+  S.renderer.shadowMap.enabled = !!(S.stages[2] && S.s3ShadowOn);
+  if (S.dirLight) S.dirLight.castShadow = true;
+  if (S.terrain)  S.terrain.receiveShadow = !!S.stages[2];
+  S.objectDefs.forEach(def => {
+    if (!def.reprGroup) return;
+    def.reprGroup.traverse(obj => {
+      if (!obj.isMesh) return;
+      obj.castShadow = true;
+      if (obj.material) {
+        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+        mats.forEach(m => { m.needsUpdate = true; });
+      }
+    });
+  });
+}
+
 export function buildDetail2() {
   document.getElementById('detail-2').innerHTML = `
     <div class="detail-section">
@@ -39,7 +64,7 @@ export function buildDetail2() {
   document.getElementById('s3-shadow').addEventListener('click', function() {
     S.s3ShadowOn = !S.s3ShadowOn;
     this.classList.toggle('on', S.s3ShadowOn);
-    S.renderer.shadowMap.enabled = S.s3ShadowOn && S.stages[2];
+    refreshShadows();
   });
 
   document.getElementById('sun-az').addEventListener('input', function() {
@@ -73,7 +98,6 @@ export function buildDetail2() {
 
     if (S.ambientLight) S.ambientLight.visible = S.s3AmbientOn && S.stages[2];
     if (S.dirLight)     S.dirLight.intensity   = 1.0;
-    S.renderer.shadowMap.enabled = S.s3ShadowOn && S.stages[2];
 
     const azEl = document.getElementById('sun-az');
     const elEl = document.getElementById('sun-el');
@@ -83,5 +107,6 @@ export function buildDetail2() {
     intEl.value = 1.0;            document.getElementById('lint-v').textContent    = '1.00';
 
     updateSunPosition();
+    refreshShadows();
   });
 }
