@@ -2,6 +2,7 @@
 // Geometry factories, per-object representation builders, selection, and the Stage 1 detail panel
 
 import { S, getEmissiveColor } from './pipeline_3d_state.js';
+import { applyObjectMatrix } from './pipeline_3d_stage2.js';
 
 // GEOMETRY FACTORY (used by points / voxel / sweep as base approximation)
 export function makeBaseGeo(def) {
@@ -256,6 +257,9 @@ export function buildRepr(def) {
   group.userData.defRef = def;
   def.reprGroup = group;
   S.scene.add(group);
+  // Re-apply reflection/shear so they survive any representation change that
+  // rebuilds the group (B-Rep -> Points, slider drags, stage toggles, etc.)
+  applyObjectMatrix(def);
   return group;
 }
 

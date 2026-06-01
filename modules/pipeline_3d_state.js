@@ -46,7 +46,7 @@ export const S = {
   objectDefs: [],
 
   // Stage 3 sub-toggles
-  s3AmbientOn: true, s3DiffuseOn: true, s3SpecularOn: false, s3ShadowOn: true,
+  s3AmbientOn: true, s3DiffuseOn: true, s3ShadowOn: true,
 
   // Stage 4 sub-toggles
   s4ViewingOn: false, s4ClipOn: false, s4HSROn: true, s4ProjOn: false,
