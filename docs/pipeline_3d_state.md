@@ -117,7 +117,6 @@ Individual on/off flags for each lighting component:
 |---|---|---|
 | `s3AmbientOn` | true | Soft fill light is active |
 | `s3DiffuseOn` | true | Direct sunlight is active |
-| `s3SpecularOn` | false | Surface shininess highlights are active |
 | `s3ShadowOn` | true | Objects cast shadows on the terrain |
 
 ---
