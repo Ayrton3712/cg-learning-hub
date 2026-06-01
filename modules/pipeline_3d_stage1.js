@@ -257,9 +257,9 @@ export function buildRepr(def) {
   group.userData.defRef = def;
   def.reprGroup = group;
   S.scene.add(group);
-  // Re-apply reflection/shear so they survive any representation change that
-  // rebuilds the group (B-Rep -> Points, slider drags, stage toggles, etc.)
-  applyObjectMatrix(def);
+  // Re-apply reflection/shear only when Stage 2 is active — objects must sit
+  // at the origin when only Stage 1 is on.
+  if (S.stages[1]) applyObjectMatrix(def);
   return group;
 }
 
