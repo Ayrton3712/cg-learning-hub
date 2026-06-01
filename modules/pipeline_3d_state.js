@@ -54,7 +54,7 @@ export const S = {
   viewAxesHelper: null, orthoCamera: null,
 
   // Stage 5 state
-  pixelSize: 4, s5AAOn: false, s5ScanlineOn: false, s5GridOn: false, scanlineY: 0,
+  pixelSize: 4, s5AAOn: false, s5GridOn: false,
 
   // Cross-module callbacks. Set by main before any stage interaction occurs
   updateDetailPanels: null,

@@ -123,4 +123,3 @@ export function drawPixelGridOverlay() {
   ctx.clearRect(0, 0, cssW, cssH);
   strokePixelGrid(ctx, cssW, cssH, cssW / effW, cssH / effH);
 }
-
