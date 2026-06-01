@@ -56,6 +56,8 @@ S.objectDefs = [
     worldPos:   new THREE.Vector3(2,  terrainHeight(2, 1),   1),
     worldRot:   new THREE.Euler(0,  0.3,  0),
     worldScale: new THREE.Vector3(1, 1, 1),
+    reflectPlane: null,
+    shear: { xy: 0, xz: 0, yx: 0, yz: 0, zx: 0, zy: 0 },
     color: 0x2d5a1b, grayColor: 0x707070,
     geoType: 'tree',
     repr: 'brep', reprGroup: null, mesh: null,
@@ -66,6 +68,8 @@ S.objectDefs = [
     worldPos:   new THREE.Vector3(-5, terrainHeight(-5, -3), -3),
     worldRot:   new THREE.Euler(0,  0.8,  0.1),
     worldScale: new THREE.Vector3(1, 1, 1),
+    reflectPlane: null,
+    shear: { xy: 0, xz: 0, yx: 0, yz: 0, zx: 0, zy: 0 },
     color: 0x7a7065, grayColor: 0x909090,
     geoType: 'rock',
     repr: 'brep', reprGroup: null, mesh: null,
@@ -76,6 +80,8 @@ S.objectDefs = [
     worldPos:   new THREE.Vector3(4,  terrainHeight(4, -3),  -3),
     worldRot:   new THREE.Euler(0, -0.5,  0),
     worldScale: new THREE.Vector3(1, 1, 1),
+    reflectPlane: null,
+    shear: { xy: 0, xz: 0, yx: 0, yz: 0, zx: 0, zy: 0 },
     color: 0x8b5e3c, grayColor: 0x808080,
     geoType: 'cabin',
     repr: 'brep', reprGroup: null, mesh: null,
@@ -297,7 +303,8 @@ function applyStageVisibility() {
   const s4 = S.stages[3];
   const s5 = S.stages[4];
 
-  // Rebuild props (handles transform, material type changes)
+  // Rebuild props (handles transform, material type changes). buildRepr also
+  // re-applies each object's reflect/shear via applyObjectMatrix.
   S.objectDefs.forEach(def => buildRepr(def));
   S.objectDefs.forEach(def => {
     if (def.reprGroup) def.reprGroup.visible = s1;

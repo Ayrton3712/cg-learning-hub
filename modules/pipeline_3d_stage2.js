@@ -4,6 +4,23 @@
 import { S } from './pipeline_3d_state.js';
 import { terrainHeight } from './pipeline_3d_landscape.js';
 
+// Pre-allocated matrix scratchpads. Reused for every object; safe under the
+// browser's single-threaded model since composeObjectMatrix + reprGroup.matrix.copy
+// complete before the next call.
+const _T = new THREE.Matrix4();
+const _R = new THREE.Matrix4();
+const _S = new THREE.Matrix4();
+const _Sh = new THREE.Matrix4();
+const _Refl = new THREE.Matrix4();
+const _Euler = new THREE.Euler();
+
+// State defaults for new per-object reflection / shear fields.
+function ensureObjTransformState(def) {
+  if (!def.reflectPlane) def.reflectPlane = null;
+  if (!def.shear)
+    def.shear = { xy: 0, xz: 0, yx: 0, yz: 0, zx: 0, zy: 0 };
+}
+
 // DETAIL PANEL
 export function buildDetail1() {
   document.getElementById('detail-1').innerHTML = `
@@ -34,6 +51,24 @@ export function buildDetail1() {
       <div class="slider-row"><label>Z</label><input type="range" id="sz" min="0.1" max="3" step="0.05" value="1"><span class="slider-val" id="sz-v">1.0</span></div>
     </div>
     <div class="detail-section">
+      <div class="detail-label">Reflect</div>
+      <select id="reflect-plane" class="obj-select">
+        <option value="">None</option>
+        <option value="xy">XY plane (mirror Z)</option>
+        <option value="yz">YZ plane (mirror X)</option>
+        <option value="xz">XZ plane (mirror Y)</option>
+      </select>
+    </div>
+    <div class="detail-section">
+      <div class="detail-label">Shear</div>
+      <div class="slider-row"><label>XY</label><input type="range" id="sh-xy" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-xy-v">0.00</span></div>
+      <div class="slider-row"><label>XZ</label><input type="range" id="sh-xz" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-xz-v">0.00</span></div>
+      <div class="slider-row"><label>YX</label><input type="range" id="sh-yx" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-yx-v">0.00</span></div>
+      <div class="slider-row"><label>YZ</label><input type="range" id="sh-yz" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-yz-v">0.00</span></div>
+      <div class="slider-row"><label>ZX</label><input type="range" id="sh-zx" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-zx-v">0.00</span></div>
+      <div class="slider-row"><label>ZY</label><input type="range" id="sh-zy" min="-1" max="1" step="0.05" value="0"><span class="slider-val" id="sh-zy-v">0.00</span></div>
+    </div>
+    <div class="detail-section">
       <button class="btn" id="reset-transform">Reset Transform</button>
     </div>
   `;
@@ -55,12 +90,33 @@ export function buildDetail1() {
     });
   });
 
+  document.getElementById('reflect-plane').addEventListener('change', function() {
+    if (!S.selectedObj || !S.stages[1]) return;
+    ensureObjTransformState(S.selectedObj);
+    S.selectedObj.reflectPlane = this.value || null;
+    applyTransformSliders();
+  });
+
+  ['sh-xy','sh-xz','sh-yx','sh-yz','sh-zx','sh-zy'].forEach(id => {
+    document.getElementById(id).addEventListener('input', function() {
+      if (!S.selectedObj || !S.stages[1]) return;
+      ensureObjTransformState(S.selectedObj);
+      const key = id.slice(3); // 'sh-xy' -> 'xy'
+      S.selectedObj.shear[key] = parseFloat(this.value);
+      document.getElementById(id + '-v').textContent = parseFloat(this.value).toFixed(2);
+      applyTransformSliders();
+    });
+  });
+
   document.getElementById('reset-transform').addEventListener('click', () => {
     if (!S.selectedObj) return;
     const idx = S.objectDefs.indexOf(S.selectedObj);
     S.selectedObj.worldPos.copy(defaultPos(idx));
     S.selectedObj.worldRot.copy(defaultRot(idx));
     S.selectedObj.worldScale.set(1, 1, 1);
+    ensureObjTransformState(S.selectedObj);
+    S.selectedObj.reflectPlane = null;
+    S.selectedObj.shear = { xy: 0, xz: 0, yx: 0, yz: 0, zx: 0, zy: 0 };
     syncTransformSliders();
     applyTransformSliders();
   });
@@ -105,11 +161,7 @@ function applyTransformSliders() {
   );
   S.selectedObj.worldScale.set(sx, sy, sz);
 
-  if (S.selectedObj.reprGroup && S.stages[1]) {
-    S.selectedObj.reprGroup.position.copy(S.selectedObj.worldPos);
-    S.selectedObj.reprGroup.rotation.copy(S.selectedObj.worldRot);
-    S.selectedObj.reprGroup.scale.copy(S.selectedObj.worldScale);
-  }
+  applyObjectMatrix(S.selectedObj);
   updateMatrixDisplay(S.selectedObj);
 }
 
@@ -130,6 +182,61 @@ function syncTransformSliders() {
   document.getElementById('sx').value = sc.x; document.getElementById('sx-v').textContent = sc.x.toFixed(2);
   document.getElementById('sy').value = sc.y; document.getElementById('sy-v').textContent = sc.y.toFixed(2);
   document.getElementById('sz').value = sc.z; document.getElementById('sz-v').textContent = sc.z.toFixed(2);
+
+  ensureObjTransformState(S.selectedObj);
+  const planeEl = document.getElementById('reflect-plane');
+  if (planeEl) planeEl.value = S.selectedObj.reflectPlane || '';
+  const sh = S.selectedObj.shear;
+  ['sh-xy','sh-xz','sh-yx','sh-yz','sh-zx','sh-zy'].forEach(id => {
+    const key = id.slice(3);
+    const v = sh[key];
+    document.getElementById(id).value = v;
+    document.getElementById(id + '-v').textContent = v.toFixed(2);
+  });
+}
+
+// Build the composed T . R . S . Shear . Reflect matrix into the pre-allocated
+// _T scratchpad. Reuses the same scratchpads on every call.
+export function composeObjectMatrix(def) {
+  ensureObjTransformState(def);
+  _T.makeTranslation(def.worldPos.x, def.worldPos.y, def.worldPos.z);
+  _Euler.set(def.worldRot.x, def.worldRot.y, def.worldRot.z, 'XYZ');
+  _R.makeRotationFromEuler(_Euler);
+  _S.makeScale(def.worldScale.x, def.worldScale.y, def.worldScale.z);
+
+  // Shear: x' = x + xy*y + xz*z, y' = y + yx*x + yz*z, z' = z + zx*x + zy*y
+  _Sh.identity();
+  const sh = def.shear;
+  _Sh.elements[1]  = sh.xy;   // M[0,1]
+  _Sh.elements[2]  = sh.xz;   // M[0,2]
+  _Sh.elements[4]  = sh.yx;   // M[1,0]
+  _Sh.elements[6]  = sh.yz;   // M[1,2]
+  _Sh.elements[8]  = sh.zx;   // M[2,0]
+  _Sh.elements[9]  = sh.zy;   // M[2,1]
+
+  // Reflect: mirror exactly one axis based on the selected plane
+  let sx = 1, sy = 1, sz = 1;
+  if (def.reflectPlane === 'yz') sx = -1;
+  else if (def.reflectPlane === 'xz') sy = -1;
+  else if (def.reflectPlane === 'xy') sz = -1;
+  _Refl.makeScale(sx, sy, sz);
+
+  // M = T . R . S . Sh . Refl  (rightmost applied to vertex first)
+  _T.multiply(_R).multiply(_S).multiply(_Sh).multiply(_Refl);
+  return _T;
+}
+
+// Apply the composed matrix to def.reprGroup and mark it as manually controlled.
+// Called from buildRepr so reflection/shear survive any path that rebuilds
+// the group (representation changes, stage toggles, slider drags).
+export function applyObjectMatrix(def) {
+  if (!def) return;
+  composeObjectMatrix(def);
+  if (def.reprGroup) {
+    def.reprGroup.matrixAutoUpdate = false;
+    def.reprGroup.matrix.copy(_T);
+    def.reprGroup.updateMatrixWorld(true);
+  }
 }
 
 export function updateMatrixDisplay(def) {
