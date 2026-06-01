@@ -4,30 +4,27 @@
 
 import { S } from './pipeline_3d_state.js';
 import { updateSunPosition } from './pipeline_3d_landscape.js';
+import { buildRepr } from './pipeline_3d_stage1.js';
+import { applyTerrainMaterial } from './pipeline_3d_landscape.js';
 
 // Re-apply every shadow-related property. Required when toggling shadows at
 // runtime because Three.js caches material programs by the shadow-enabled state
 // at first compile; just flipping renderer.shadowMap.enabled invalidates which
 // shader chunks are needed but the cached program stays in place, so the new
-// shadow pass silently no-ops until something forces a recompile. Marking each
-// material's needsUpdate invalidates the cache and lets the renderer rebuild
-// the program with the correct shadow chunks on the next frame.
+// shadow pass silently no-ops until something forces a recompile. Just setting
+// material.needsUpdate is not enough to invalidate the cached WebGL program in
+// r128 when only the shadow state changes, so we rebuild the meshes (via
+// buildRepr, which re-creates Mesh + MeshStandardMaterial instances) and swap
+// the terrain material (via applyTerrainMaterial). This is the same recipe
+// setTheme -> applyStageVisibility uses, and is the only known path that
+// actually refreshes the shadow pass on toggle.
 function refreshShadows() {
   if (!S.renderer) return;
   S.renderer.shadowMap.enabled = !!(S.stages[2] && S.s3ShadowOn);
   if (S.dirLight) S.dirLight.castShadow = true;
   if (S.terrain)  S.terrain.receiveShadow = !!S.stages[2];
-  S.objectDefs.forEach(def => {
-    if (!def.reprGroup) return;
-    def.reprGroup.traverse(obj => {
-      if (!obj.isMesh) return;
-      obj.castShadow = true;
-      if (obj.material) {
-        const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
-        mats.forEach(m => { m.needsUpdate = true; });
-      }
-    });
-  });
+  S.objectDefs.forEach(def => buildRepr(def));
+  applyTerrainMaterial(S.stages[2]);
 }
 
 export function buildDetail2() {
