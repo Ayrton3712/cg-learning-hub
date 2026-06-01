@@ -199,7 +199,17 @@ function syncTransformSliders() {
 // _T scratchpad. Reuses the same scratchpads on every call.
 export function composeObjectMatrix(def) {
   ensureObjTransformState(def);
-  _T.makeTranslation(def.worldPos.x, def.worldPos.y, def.worldPos.z);
+
+  // Translate by the REFLECTED world position so "reflect this object across
+  // the YZ plane" actually moves it to the other side of the world, not just
+  // flips its internal geometry. def.worldPos itself is left untouched so the
+  // T slider keeps its canonical value and toggling reflection is reversible.
+  let tx = def.worldPos.x, ty = def.worldPos.y, tz = def.worldPos.z;
+  if (def.reflectPlane === 'yz')      tx = -tx;
+  else if (def.reflectPlane === 'xz') ty = -ty;
+  else if (def.reflectPlane === 'xy') tz = -tz;
+  _T.makeTranslation(tx, ty, tz);
+
   _Euler.set(def.worldRot.x, def.worldRot.y, def.worldRot.z, 'XYZ');
   _R.makeRotationFromEuler(_Euler);
   _S.makeScale(def.worldScale.x, def.worldScale.y, def.worldScale.z);
@@ -221,7 +231,7 @@ export function composeObjectMatrix(def) {
   else if (def.reflectPlane === 'xy') sz = -1;
   _Refl.makeScale(sx, sy, sz);
 
-  // M = T . R . S . Sh . Refl  (rightmost applied to vertex first)
+  // M = T(reflected) . R . S . Sh . Refl  (rightmost applied to vertex first)
   _T.multiply(_R).multiply(_S).multiply(_Sh).multiply(_Refl);
   return _T;
 }
